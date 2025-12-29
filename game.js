@@ -120,12 +120,37 @@ const NUMBER_PATTERNS = {
     ]
 };
 
+function getCameraSettings() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+
+    // Base frustum size - needs to be larger on portrait mobile to fit the board
+    let frustumSize = 16;
+    let zoom = 1.1;
+
+    if (isMobile) {
+        // Portrait mobile: board is taller than wide in isometric view
+        // Need to zoom out significantly to fit the full board
+        if (aspect < 1) {
+            // Portrait orientation - zoom out more
+            frustumSize = 22;
+            zoom = isSmallMobile ? 0.65 : 0.75;
+        } else {
+            // Landscape mobile
+            frustumSize = 18;
+            zoom = 0.9;
+        }
+    }
+
+    return { aspect, frustumSize, zoom };
+}
+
 function initThreeJS() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.COLORS.BACKGROUND);
 
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 16;
+    const { aspect, frustumSize, zoom } = getCameraSettings();
     camera = new THREE.OrthographicCamera(
         -frustumSize * aspect / 2,
         frustumSize * aspect / 2,
@@ -140,7 +165,7 @@ function initThreeJS() {
 
     camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
     camera.lookAt(gridCenterX, 0, gridCenterZ);
-    camera.zoom = 1.1;
+    camera.zoom = zoom;
     camera.updateProjectionMatrix();
 
     const canvas = document.getElementById('game-canvas');
@@ -181,12 +206,12 @@ function setupLighting() {
 }
 
 function onWindowResize() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const frustumSize = 16;
+    const { aspect, frustumSize, zoom } = getCameraSettings();
     camera.left = -frustumSize * aspect / 2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
     camera.bottom = -frustumSize / 2;
+    camera.zoom = zoom;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -1736,18 +1761,186 @@ function playTechnoLoop() {
     if (!GameState.musicPlaying || !audioContext) return;
 
     const now = audioContext.currentTime;
-    const bpm = 140;
+    const level = GameState.currentLevel;
+
+    // BPM increases with level: 120 -> 180
+    const bpm = 120 + (level - 1) * 5;
     const beat = 60 / bpm;
 
-    [0, 2, 4, 6].forEach(i => playDrum(now + i * beat, 80, 0.08));
-    for (let i = 0; i < 16; i++) playHiHat(now + i * (beat / 2), 0.025);
+    // Intensity scaling based on level (0.0 to 1.0)
+    const intensity = Math.min((level - 1) / 11, 1.0);
 
-    const notes = [130.81, 164.81, 196.00, 261.63, 196.00, 164.81];
-    notes.forEach((freq, i) => playSynth(now + i * (beat / 1.5), freq, 0.06, beat / 2));
+    // KICK DRUMS - More complex patterns at higher levels
+    const kickVolume = 0.08 + intensity * 0.04;
+    if (level <= 4) {
+        // Simple 4-on-floor
+        [0, 2, 4, 6].forEach(i => playDrum(now + i * beat, 80 + level * 5, kickVolume));
+    } else if (level <= 8) {
+        // Add offbeat kicks
+        [0, 1.5, 2, 3.5, 4, 5.5, 6, 7.5].forEach(i => playDrum(now + i * beat, 85 + level * 5, kickVolume));
+    } else {
+        // Intense double-time kicks
+        for (let i = 0; i < 16; i++) {
+            playDrum(now + i * (beat / 2), 90 + level * 3, kickVolume * (i % 2 === 0 ? 1 : 0.7));
+        }
+    }
 
-    [65.41, 65.41, 82.41, 73.42].forEach((freq, i) => playBass(now + i * beat * 2, freq, 0.1, beat * 1.5));
+    // HI-HATS - Faster at higher levels
+    const hihatSpeed = level <= 4 ? 2 : (level <= 8 ? 4 : 8);
+    const hihatVolume = 0.02 + intensity * 0.02;
+    for (let i = 0; i < 8 * hihatSpeed; i++) {
+        playHiHat(now + i * (beat * 8 / (8 * hihatSpeed)), hihatVolume);
+    }
+
+    // SYNTH MELODY - More complex and higher pitched at higher levels
+    const synthVolume = 0.05 + intensity * 0.04;
+    const baseNote = 130.81 + (level - 1) * 10; // C3 going up
+
+    let melodyNotes;
+    if (level <= 4) {
+        // Simple arpeggio
+        melodyNotes = [baseNote, baseNote * 1.25, baseNote * 1.5, baseNote * 2];
+    } else if (level <= 8) {
+        // More energetic pattern
+        melodyNotes = [baseNote, baseNote * 1.25, baseNote * 1.5, baseNote * 2, baseNote * 1.5, baseNote * 1.25, baseNote * 2, baseNote];
+    } else {
+        // Intense rapid arpeggios
+        melodyNotes = [baseNote, baseNote * 1.5, baseNote * 2, baseNote * 2.5, baseNote * 2, baseNote * 1.5, baseNote * 2, baseNote * 1.25,
+                       baseNote * 1.5, baseNote * 2, baseNote * 2.5, baseNote * 3, baseNote * 2.5, baseNote * 2, baseNote * 1.5, baseNote];
+    }
+
+    const noteLength = beat * 8 / melodyNotes.length;
+    melodyNotes.forEach((freq, i) => {
+        playSynth(now + i * noteLength, freq, synthVolume, noteLength * 0.8);
+    });
+
+    // BASS - Deeper and more aggressive at higher levels
+    const bassVolume = 0.08 + intensity * 0.06;
+    const bassBase = 65.41 - (level > 6 ? 10 : 0); // Lower bass at high levels
+
+    let bassPattern;
+    if (level <= 4) {
+        bassPattern = [bassBase, bassBase, bassBase * 1.25, bassBase * 1.125];
+    } else if (level <= 8) {
+        bassPattern = [bassBase, bassBase * 0.75, bassBase, bassBase * 1.25, bassBase, bassBase * 0.875, bassBase, bassBase * 1.5];
+    } else {
+        // Wobble bass effect for high levels
+        bassPattern = [];
+        for (let i = 0; i < 16; i++) {
+            bassPattern.push(bassBase * (1 + Math.sin(i * 0.5) * 0.25));
+        }
+    }
+
+    const bassNoteLength = beat * 8 / bassPattern.length;
+    bassPattern.forEach((freq, i) => {
+        playBass(now + i * bassNoteLength, freq, bassVolume, bassNoteLength * 0.9);
+    });
+
+    // ADD EXTRA LAYERS AT HIGH LEVELS
+    if (level >= 6) {
+        // Add pad/atmosphere
+        playPad(now, baseNote / 2, 0.03 + intensity * 0.02, beat * 8);
+    }
+
+    if (level >= 9) {
+        // Add lead stabs
+        const stabTimes = [0, 1.5, 3, 4.5, 6];
+        stabTimes.forEach(t => {
+            playStab(now + t * beat, baseNote * 2, 0.04, beat * 0.3);
+        });
+    }
+
+    if (level >= 11) {
+        // Add noise sweeps for final levels
+        playNoiseSweep(now, beat * 4, 0.03);
+    }
 
     setTimeout(() => { if (GameState.musicPlaying) playTechnoLoop(); }, beat * 8 * 1000 - 50);
+}
+
+// New sound functions for dynamic music
+function playPad(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc1.type = 'sine';
+    osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(freq, time);
+    osc2.frequency.setValueAtTime(freq * 1.005, time); // Slight detune for richness
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, time);
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.3);
+    gain.gain.setValueAtTime(vol, time + dur - 0.3);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + dur);
+    osc2.stop(time + dur);
+}
+
+function playStab(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, time);
+
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(freq * 2, time);
+    filter.Q.value = 5;
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(time);
+    osc.stop(time + dur);
+}
+
+function playNoiseSweep(time, dur, vol) {
+    if (!audioContext) return;
+    const bufferSize = audioContext.sampleRate * dur;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (i / bufferSize); // Rising noise
+    }
+
+    const source = audioContext.createBufferSource();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    source.buffer = buffer;
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(500, time);
+    filter.frequency.exponentialRampToValueAtTime(4000, time + dur);
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    source.start(time);
 }
 
 function playDrum(time, freq, vol) {
@@ -1947,6 +2140,101 @@ function updateTimeBasedScore() {
 }
 
 // ============================================
+// TOUCH/SWIPE CONTROLS
+// ============================================
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+const SWIPE_THRESHOLD = 30; // Minimum distance for swipe detection
+
+function setupTouchControls() {
+    const gameContainer = document.getElementById('game-container');
+
+    gameContainer.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    gameContainer.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: true });
+
+    // Prevent default touch behaviors that interfere with game
+    gameContainer.addEventListener('touchmove', (e) => {
+        if (GameState.isPlaying && !GameState.isPaused) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
+function handleSwipe() {
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+
+    // Check if swipe is significant enough
+    if (Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
+        // It's a tap, not a swipe - handle tap for menus
+        handleTap();
+        return;
+    }
+
+    if (!GameState.isPlaying || GameState.isPaused || GameState.isCountingDown) return;
+
+    // Determine swipe direction (favor the dominant axis)
+    if (absDeltaX > absDeltaY) {
+        // Horizontal swipe
+        if (deltaX > 0) {
+            movePlayer(1, 0); // Right
+        } else {
+            movePlayer(-1, 0); // Left
+        }
+    } else {
+        // Vertical swipe
+        if (deltaY > 0) {
+            movePlayer(0, 1); // Down
+        } else {
+            movePlayer(0, -1); // Up
+        }
+    }
+}
+
+function handleTap() {
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const levelCompleteScreen = document.getElementById('level-complete-screen');
+    const winScreen = document.getElementById('win-screen');
+    const tutorialPopup = document.getElementById('tutorial-popup');
+
+    // Handle tutorial dismiss on tap
+    if (!tutorialPopup.classList.contains('hidden')) {
+        tutorialPopup.classList.add('hidden');
+        GameState.tutorialShown = true;
+        return;
+    }
+
+    // Don't auto-start on tap for start screen - use button instead
+}
+
+function isTouchDevice() {
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+}
+
+function showMobileHint() {
+    if (!isTouchDevice()) return;
+
+    // Update controls text for mobile
+    const controlsText = document.querySelector('.vintage-controls p');
+    if (controlsText) {
+        controlsText.textContent = 'SWIPE TO MOVE';
+    }
+}
+
+// ============================================
 // INPUT HANDLING
 // ============================================
 function setupInputHandlers() {
@@ -2057,6 +2345,8 @@ function init() {
     initAudio();
     createTileGrid();
     setupInputHandlers();
+    setupTouchControls();
+    showMobileHint();
     updateHUD();
     animate();
     console.log('Time Mission: Magma Mayhem initialized!');
