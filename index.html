@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Mission: Magma Mayhem</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD Overlay -->
+        <div id="hud">
+            <div id="hud-logo">
+                <span class="hud-logo-time">TIME</span>
+                <span class="hud-logo-mission">MISSION</span>
+            </div>
+            <div id="level-display">Sector 1/12</div>
+            <div id="score-display">Score: 0</div>
+            <div id="lives-display">
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+                <span class="heart">❤️</span>
+            </div>
+            <div id="timer-container">
+                <span id="potential-score">+10</span>
+                <div id="timer-bar">
+                    <div id="timer-bar-fill"></div>
+                </div>
+                <span id="timer-label">COLLECT ALL BLUE!</span>
+            </div>
+        </div>
+
+        <!-- Start Screen - Vintage Arcade Style -->
+        <div id="start-screen" class="overlay">
+            <div class="vintage-start">
+                <div class="vintage-title">
+                    <span class="title-time">TIME</span>
+                    <span class="title-mission">MISSION</span>
+                </div>
+                <h1 class="vintage-subtitle">MAGMA MAYHEM</h1>
+
+                <div class="vintage-instructions">
+                    <p>AVOID RED - COLLECT ALL BLUE - BE FAST!</p>
+                </div>
+
+                <div class="vintage-characters">
+                    <div class="char-option selected" data-character="chicken">
+                        <div class="char-preview-icon chicken-icon">
+                            <div class="chicken-body"></div>
+                            <div class="chicken-head"></div>
+                            <div class="chicken-comb"></div>
+                            <div class="chicken-beak"></div>
+                            <div class="chicken-eye left"></div>
+                            <div class="chicken-eye right"></div>
+                        </div>
+                        <span>CLUCKY</span>
+                    </div>
+                    <div class="char-option" data-character="banana">
+                        <div class="char-preview-icon banana-icon">
+                            <div class="banana-body"></div>
+                            <div class="banana-stem"></div>
+                            <div class="banana-face"></div>
+                            <div class="banana-eye left"></div>
+                            <div class="banana-eye right"></div>
+                            <div class="banana-smile"></div>
+                            <div class="banana-arm left"></div>
+                            <div class="banana-arm right"></div>
+                        </div>
+                        <span>BANANA</span>
+                    </div>
+                    <div class="char-option" data-character="skier">
+                        <div class="char-preview-icon skier-icon">
+                            <div class="skier-body"></div>
+                            <div class="skier-head"></div>
+                            <div class="skier-hat"></div>
+                            <div class="skier-pompom"></div>
+                            <div class="skier-goggles"></div>
+                            <div class="skier-ski left"></div>
+                            <div class="skier-ski right"></div>
+                        </div>
+                        <span>SHREDDER</span>
+                    </div>
+                    <div class="char-option" data-character="turtle">
+                        <div class="char-preview-icon turtle-icon">
+                            <div class="turtle-shell"></div>
+                            <div class="turtle-pattern"></div>
+                            <div class="turtle-head"></div>
+                            <div class="turtle-eye left"></div>
+                            <div class="turtle-eye right"></div>
+                            <div class="turtle-leg fl"></div>
+                            <div class="turtle-leg fr"></div>
+                            <div class="turtle-leg bl"></div>
+                            <div class="turtle-leg br"></div>
+                        </div>
+                        <span>SHELLY</span>
+                    </div>
+                </div>
+
+                <button id="start-btn" class="game-btn start-btn">START GAME</button>
+
+                <div class="vintage-start-prompt">
+                    <span class="blink">OR PRESS ENTER</span>
+                </div>
+
+                <div class="vintage-controls">
+                    <p>WASD OR ARROW KEYS TO MOVE</p>
+                </div>
+
+                <div class="vintage-copyright">
+                    <p>© 2025 TIME MISSION</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Countdown Overlay -->
+        <div id="countdown-overlay" class="overlay hidden">
+            <div class="countdown-number" id="countdown-display">3</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay hidden">
+            <div class="overlay-content">
+                <h1>💀 MISSION FAILED 💀</h1>
+                <p id="final-score">Score: 0/100</p>
+                <p id="final-level">Reached Level: 1</p>
+                <button id="retry-btn" class="game-btn">RETRY MISSION</button>
+            </div>
+        </div>
+
+        <!-- Level Complete Screen -->
+        <div id="level-complete-screen" class="overlay hidden">
+            <div class="overlay-content">
+                <h1>⭐ SECTOR CLEAR ⭐</h1>
+                <p id="level-score">+8 points!</p>
+                <button id="next-level-btn" class="game-btn">NEXT SECTOR</button>
+            </div>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="win-screen" class="overlay hidden">
+            <div class="overlay-content">
+                <div class="time-mission-logo small">
+                    <span class="logo-time">TIME</span>
+                    <span class="logo-mission">MISSION</span>
+                </div>
+                <h1>🏆 MISSION COMPLETE! 🏆</h1>
+                <p>Congratulations, Agent!</p>
+                <p id="win-score">Final Score: 100/100</p>
+                <button id="play-again-btn" class="game-btn">NEW MISSION</button>
+            </div>
+        </div>
+
+        <!-- Pause indicator -->
+        <div id="pause-indicator" class="hidden">PAUSED</div>
+
+        <!-- Tutorial Popup -->
+        <div id="tutorial-popup" class="overlay hidden">
+            <div class="tutorial-content">
+                <h2>HOW TO SCORE</h2>
+                <div class="tutorial-icon">⏱️</div>
+                <p class="tutorial-main">Collect all <span class="blue-text">BLUE</span> tiles to complete each sector!</p>
+                <p class="tutorial-detail">Complete in <span class="green-text">under 10 seconds</span> for maximum points.</p>
+                <p class="tutorial-detail">After 10 seconds, your potential score starts to drop!</p>
+                <div class="tutorial-score-example">
+                    <span class="score-high">+10</span> → <span class="score-low">+1</span>
+                </div>
+                <button id="tutorial-ok-btn" class="game-btn">GOT IT!</button>
+            </div>
+        </div>
+
+        <!-- Music toggle -->
+        <button id="music-toggle" class="music-btn">🔊</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
