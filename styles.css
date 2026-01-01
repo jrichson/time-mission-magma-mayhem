@@ -1032,41 +1032,94 @@ body {
     pointer-events: auto;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments for mobile */
 @media (max-width: 768px) {
+    /* Mobile HUD - Single row compact layout */
     #hud {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 8px;
+        background: rgba(0, 0, 0, 0.7);
     }
 
     #hud > div {
-        font-size: 11px;
-        padding: 8px 12px;
+        font-size: 8px;
+        padding: 4px 8px;
+        border-width: 1px;
+        white-space: nowrap;
     }
 
+    #hud-logo {
+        display: none; /* Hide logo on mobile to save space */
+    }
+
+    .hud-logo-time, .hud-logo-mission {
+        font-size: 8px;
+    }
+
+    #level-display {
+        order: 1;
+        flex: 0 0 auto;
+        text-align: center;
+    }
+
+    #score-display {
+        order: 2;
+        flex: 0 0 auto;
+        text-align: center;
+    }
+
+    #lives-display {
+        order: 3;
+        font-size: 12px;
+        letter-spacing: 1px;
+        padding: 4px 6px;
+    }
+
+    /* Hide timer container in top HUD on mobile - show separately */
+    #timer-container {
+        position: fixed;
+        top: auto;
+        bottom: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        order: 4;
+        width: auto;
+        justify-content: center;
+        padding: 8px 16px !important;
+        margin-top: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85) !important;
+        border-radius: 8px;
+    }
+
+    #potential-score {
+        font-size: 16px;
+        min-width: 35px;
+    }
+
+    #timer-bar {
+        width: 80px;
+        height: 10px;
+    }
+
+    #timer-label {
+        font-size: 7px;
+    }
+
+    /* Mobile overlay content */
     .overlay-content {
-        padding: 20px 25px;
-        margin: 15px;
-    }
-
-    .logo-time {
-        font-size: 32px;
-        letter-spacing: 8px;
-    }
-
-    .logo-mission {
-        font-size: 24px;
-        letter-spacing: 12px;
-    }
-
-    .game-subtitle {
-        font-size: 24px;
-        letter-spacing: 4px;
+        padding: 20px 20px;
+        margin: 10px;
+        max-width: 95vw;
     }
 
     .overlay-content h1 {
-        font-size: 18px;
+        font-size: 16px;
+        margin-bottom: 15px;
     }
 
     .overlay-content p {
@@ -1074,25 +1127,208 @@ body {
     }
 
     .game-btn {
+        font-size: 11px;
+        padding: 14px 28px;
+    }
+
+    /* Mobile start screen */
+    .vintage-start {
+        padding: 20px 15px;
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .title-time {
+        font-size: 22px;
+        letter-spacing: 4px;
+    }
+
+    .title-mission {
+        font-size: 14px;
+        letter-spacing: 3px;
+    }
+
+    .vintage-subtitle {
         font-size: 12px;
-        padding: 14px 30px;
+        letter-spacing: 2px;
+        margin: 12px 0;
     }
 
-    .character-options {
-        flex-wrap: wrap;
-    }
-
-    .character-option {
-        width: 70px;
+    .vintage-instructions {
+        margin: 15px 0;
         padding: 8px;
     }
 
-    .char-preview {
-        width: 40px;
-        height: 40px;
+    .vintage-instructions p {
+        font-size: 8px;
+        letter-spacing: 1px;
     }
 
-    .countdown-number {
-        font-size: 120px;
+    .vintage-characters {
+        gap: 6px;
+        margin: 15px 0;
     }
+
+    .char-option {
+        padding: 8px 10px;
+        min-width: 65px;
+        font-size: 6px;
+    }
+
+    .char-preview-icon {
+        width: 40px;
+        height: 48px;
+        transform: scale(0.8);
+    }
+
+    .start-btn {
+        font-size: 11px !important;
+        padding: 16px 35px !important;
+        margin: 18px 0 8px !important;
+    }
+
+    .vintage-start-prompt span {
+        font-size: 8px;
+    }
+
+    .vintage-controls p {
+        font-size: 7px;
+    }
+
+    .vintage-copyright p {
+        font-size: 6px;
+    }
+
+    /* Mobile tutorial */
+    .tutorial-content {
+        padding: 20px 25px;
+        max-width: 90vw;
+    }
+
+    .tutorial-content h2 {
+        font-size: 14px;
+    }
+
+    .tutorial-icon {
+        font-size: 36px;
+        margin-bottom: 15px;
+    }
+
+    .tutorial-main {
+        font-size: 13px;
+    }
+
+    .tutorial-detail {
+        font-size: 11px;
+    }
+
+    .tutorial-score-example {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    /* Mobile countdown */
+    .countdown-number {
+        font-size: 100px;
+    }
+
+    /* Mobile level transition */
+    .level-transition {
+        font-size: 28px;
+    }
+
+    /* Mobile pause indicator */
+    #pause-indicator {
+        font-size: 32px;
+        letter-spacing: 6px;
+    }
+
+    /* Mobile music button */
+    .music-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        bottom: 15px;
+        right: 15px;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+    #hud > div {
+        font-size: 8px;
+        padding: 5px 8px;
+    }
+
+    #lives-display {
+        font-size: 12px;
+    }
+
+    .title-time {
+        font-size: 18px;
+    }
+
+    .title-mission {
+        font-size: 12px;
+    }
+
+    .vintage-subtitle {
+        font-size: 10px;
+    }
+
+    .char-option {
+        min-width: 55px;
+        padding: 6px 8px;
+    }
+
+    .start-btn {
+        font-size: 10px !important;
+        padding: 14px 28px !important;
+    }
+}
+
+/* Touch device hint */
+.touch-hint {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #666;
+    text-align: center;
+    pointer-events: none;
+    z-index: 50;
+    animation: fadeInOut 3s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+}
+
+/* Swipe indicator arrows */
+.swipe-indicator {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 30px;
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 50;
+}
+
+.swipe-arrow {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #00ffff;
 }

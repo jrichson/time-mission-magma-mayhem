@@ -123,34 +123,35 @@ const NUMBER_PATTERNS = {
 function getCameraSettings() {
     const aspect = window.innerWidth / window.innerHeight;
     const isMobile = window.innerWidth <= 768;
-    const isSmallMobile = window.innerWidth <= 480;
 
-    // Base frustum size - needs to be larger on portrait mobile to fit the board
+    // Base frustum size and zoom
     let frustumSize = 16;
     let zoom = 1.1;
+    // Camera offset for positioning board on screen
+    let cameraOffsetY = 0;
 
-    if (isMobile) {
-        // Portrait mobile: board is taller than wide in isometric view
-        // Need to zoom out significantly to fit the full board
-        if (aspect < 1) {
-            // Portrait orientation - zoom out more
-            frustumSize = 22;
-            zoom = isSmallMobile ? 0.65 : 0.75;
-        } else {
-            // Landscape mobile
-            frustumSize = 18;
-            zoom = 0.9;
-        }
+    if (isMobile && aspect < 1) {
+        // Portrait mobile - make board larger and position higher
+        // Larger zoom = closer/bigger board
+        frustumSize = 14;
+        zoom = 1.0;
+        // Offset to move view up (board appears higher on screen)
+        cameraOffsetY = 3;
+    } else if (isMobile) {
+        // Landscape mobile
+        frustumSize = 16;
+        zoom = 1.0;
+        cameraOffsetY = 0;
     }
 
-    return { aspect, frustumSize, zoom };
+    return { aspect, frustumSize, zoom, cameraOffsetY };
 }
 
 function initThreeJS() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.COLORS.BACKGROUND);
 
-    const { aspect, frustumSize, zoom } = getCameraSettings();
+    const { aspect, frustumSize, zoom, cameraOffsetY } = getCameraSettings();
     camera = new THREE.OrthographicCamera(
         -frustumSize * aspect / 2,
         frustumSize * aspect / 2,
@@ -163,8 +164,9 @@ function initThreeJS() {
     const gridCenterX = CONFIG.GRID.WIDTH / 2;
     const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
 
+    // Position camera - offset moves the view up on mobile
     camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
-    camera.lookAt(gridCenterX, 0, gridCenterZ);
+    camera.lookAt(gridCenterX, cameraOffsetY, gridCenterZ - cameraOffsetY);
     camera.zoom = zoom;
     camera.updateProjectionMatrix();
 
@@ -206,12 +208,18 @@ function setupLighting() {
 }
 
 function onWindowResize() {
-    const { aspect, frustumSize, zoom } = getCameraSettings();
+    const { aspect, frustumSize, zoom, cameraOffsetY } = getCameraSettings();
     camera.left = -frustumSize * aspect / 2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
     camera.bottom = -frustumSize / 2;
     camera.zoom = zoom;
+
+    // Update camera look target for mobile offset
+    const gridCenterX = CONFIG.GRID.WIDTH / 2;
+    const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
+    camera.lookAt(gridCenterX, cameraOffsetY, gridCenterZ - cameraOffsetY);
+
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -673,6 +681,7 @@ function flashAllTilesGreen() {
 
 async function runCountdown() {
     GameState.isCountingDown = true;
+    console.log('Starting countdown...');
 
     // NO overlay - just show on floor tiles
     for (let i = 3; i >= 1; i--) {
@@ -687,7 +696,13 @@ async function runCountdown() {
     await sleep(400);
 
     GameState.isCountingDown = false;
-    initializeLevel();
+    console.log('Countdown complete, initializing level...');
+    try {
+        initializeLevel();
+        console.log('Level initialized successfully');
+    } catch (e) {
+        console.error('Error initializing level:', e);
+    }
 }
 
 function sleep(ms) {
@@ -1709,6 +1724,7 @@ function showTutorial() {
             tutorialPopup.classList.add('hidden');
             GameState.tutorialShown = true;
             okBtn.removeEventListener('click', dismissTutorial);
+            okBtn.removeEventListener('touchend', touchHandler);
             document.removeEventListener('keydown', keyHandler);
             resolve();
         };
@@ -1720,7 +1736,15 @@ function showTutorial() {
             }
         };
 
+        // Touch handler for mobile
+        const touchHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dismissTutorial();
+        };
+
         okBtn.addEventListener('click', dismissTutorial);
+        okBtn.addEventListener('touchend', touchHandler);
         document.addEventListener('keydown', keyHandler);
     });
 }
@@ -2144,70 +2168,85 @@ function updateTimeBasedScore() {
 // ============================================
 let touchStartX = 0;
 let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
-const SWIPE_THRESHOLD = 30; // Minimum distance for swipe detection
+let touchStartTime = 0;
+const SWIPE_THRESHOLD = 25; // Minimum distance for swipe detection
+const TAP_THRESHOLD = 200; // Max ms for a tap
 
 function setupTouchControls() {
-    const gameContainer = document.getElementById('game-container');
-
-    gameContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+    // Use document for better touch capture on iOS
+    document.addEventListener('touchstart', (e) => {
+        // Only handle touches on game area, not UI buttons
+        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn')) {
+            return;
+        }
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
     }, { passive: true });
 
-    gameContainer.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        touchEndY = e.changedTouches[0].screenY;
-        handleSwipe();
+    document.addEventListener('touchend', (e) => {
+        // Only handle touches on game area, not UI buttons
+        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn')) {
+            return;
+        }
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        handleSwipe(touchEndX, touchEndY);
     }, { passive: true });
 
-    // Prevent default touch behaviors that interfere with game
-    gameContainer.addEventListener('touchmove', (e) => {
+    // Prevent scrolling during gameplay
+    document.addEventListener('touchmove', (e) => {
         if (GameState.isPlaying && !GameState.isPaused) {
             e.preventDefault();
         }
     }, { passive: false });
 }
 
-function handleSwipe() {
+function handleSwipe(touchEndX, touchEndY) {
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
+    const elapsed = Date.now() - touchStartTime;
+
+    // Check if it's a tap (short time, small movement)
+    if (elapsed < TAP_THRESHOLD && Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
+        handleTap();
+        return;
+    }
 
     // Check if swipe is significant enough
     if (Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
-        // It's a tap, not a swipe - handle tap for menus
-        handleTap();
         return;
     }
 
     if (!GameState.isPlaying || GameState.isPaused || GameState.isCountingDown) return;
 
-    // Determine swipe direction (favor the dominant axis)
+    // Map swipe to isometric grid movement
+    // In isometric view with camera at top-right looking down-left:
+    // Swipe UP on screen = move toward top of screen = -Z in grid (forward)
+    // Swipe DOWN on screen = move toward bottom = +Z in grid (backward)
+    // Swipe LEFT on screen = -X in grid (left)
+    // Swipe RIGHT on screen = +X in grid (right)
+
     if (absDeltaX > absDeltaY) {
-        // Horizontal swipe
+        // Horizontal swipe dominates
         if (deltaX > 0) {
-            movePlayer(1, 0); // Right
+            movePlayer(1, 0); // Swipe right = move right in grid
         } else {
-            movePlayer(-1, 0); // Left
+            movePlayer(-1, 0); // Swipe left = move left in grid
         }
     } else {
-        // Vertical swipe
+        // Vertical swipe dominates
         if (deltaY > 0) {
-            movePlayer(0, 1); // Down
+            movePlayer(0, 1); // Swipe down = move down/back in grid
         } else {
-            movePlayer(0, -1); // Up
+            movePlayer(0, -1); // Swipe up = move up/forward in grid
         }
     }
 }
 
 function handleTap() {
-    const startScreen = document.getElementById('start-screen');
-    const gameOverScreen = document.getElementById('game-over-screen');
-    const levelCompleteScreen = document.getElementById('level-complete-screen');
-    const winScreen = document.getElementById('win-screen');
     const tutorialPopup = document.getElementById('tutorial-popup');
 
     // Handle tutorial dismiss on tap
@@ -2216,8 +2255,6 @@ function handleTap() {
         GameState.tutorialShown = true;
         return;
     }
-
-    // Don't auto-start on tap for start screen - use button instead
 }
 
 function isTouchDevice() {
