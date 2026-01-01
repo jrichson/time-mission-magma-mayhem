@@ -120,30 +120,45 @@ const NUMBER_PATTERNS = {
     ]
 };
 
-function getCameraSettings() {
+function getCameraSettings(forCountdown = false) {
     const aspect = window.innerWidth / window.innerHeight;
     const isMobile = window.innerWidth <= 768;
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isMobileOrTouch = isMobile || isTouchDevice;
 
-    // Base frustum size and zoom
+    // Base frustum size and zoom (desktop)
     let frustumSize = 16;
     let zoom = 1.1;
     let followPlayer = false;
 
-    // Enable camera follow on mobile/touch devices
-    if ((isMobile || isTouchDevice) && aspect < 1) {
-        // Portrait mobile - zoomed out 20% (was 10/1.3, now 12/1.04)
-        frustumSize = 12;
-        zoom = 1.04;
-        followPlayer = true;
-    } else if (isMobile || isTouchDevice) {
-        // Landscape mobile - zoomed out 20%
-        frustumSize = 14.4;
-        zoom = 0.88;
-        followPlayer = true;
+    // Mobile settings
+    if (isMobileOrTouch && aspect < 1) {
+        if (forCountdown) {
+            // Portrait mobile COUNTDOWN - show entire board
+            frustumSize = 20;
+            zoom = 0.7;
+            followPlayer = false;
+        } else {
+            // Portrait mobile GAMEPLAY - zoomed out 25% more (was 12/1.04, now 15/0.78)
+            frustumSize = 15;
+            zoom = 0.78;
+            followPlayer = true;
+        }
+    } else if (isMobileOrTouch) {
+        if (forCountdown) {
+            // Landscape mobile COUNTDOWN - show entire board
+            frustumSize = 18;
+            zoom = 0.8;
+            followPlayer = false;
+        } else {
+            // Landscape mobile GAMEPLAY - zoomed out 25% more
+            frustumSize = 18;
+            zoom = 0.66;
+            followPlayer = true;
+        }
     }
 
-    return { aspect, frustumSize, zoom, followPlayer, isMobile: isMobile || isTouchDevice };
+    return { aspect, frustumSize, zoom, followPlayer, isMobile: isMobileOrTouch };
 }
 
 // Camera tracking state for mobile
@@ -151,8 +166,48 @@ const CameraState = {
     targetLookAt: { x: 6, y: 0, z: 12 },
     currentLookAt: { x: 6, y: 0, z: 12 },
     smoothSpeed: 0.15, // How fast camera follows (0-1, higher = faster)
-    initialized: false
+    initialized: false,
+    isTransitioning: false,
+    transitionProgress: 0
 };
+
+// Set camera to show entire board (for countdown)
+function setCameraForCountdown() {
+    const settings = getCameraSettings(true); // true = countdown mode
+    if (!settings.isMobile) return;
+
+    const gridCenterX = CONFIG.GRID.WIDTH / 2;
+    const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
+
+    // Update camera frustum for full board view
+    camera.left = -settings.frustumSize * settings.aspect / 2;
+    camera.right = settings.frustumSize * settings.aspect / 2;
+    camera.top = settings.frustumSize / 2;
+    camera.bottom = -settings.frustumSize / 2;
+    camera.zoom = settings.zoom;
+
+    // Center camera on entire grid
+    camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
+    camera.lookAt(gridCenterX, 0, gridCenterZ);
+    camera.updateProjectionMatrix();
+}
+
+// Transition camera from countdown view to gameplay view
+function transitionCameraToGameplay() {
+    const settings = getCameraSettings(false); // false = gameplay mode
+    if (!settings.isMobile) return;
+
+    // Update camera frustum for gameplay
+    camera.left = -settings.frustumSize * settings.aspect / 2;
+    camera.right = settings.frustumSize * settings.aspect / 2;
+    camera.top = settings.frustumSize / 2;
+    camera.bottom = -settings.frustumSize / 2;
+    camera.zoom = settings.zoom;
+    camera.updateProjectionMatrix();
+
+    // Reset camera state to follow player
+    resetCameraToPlayer();
+}
 
 function updateCameraFollow() {
     const settings = getCameraSettings();
@@ -832,6 +887,9 @@ function flashAllTilesGreen() {
 async function runCountdown() {
     GameState.isCountingDown = true;
 
+    // On mobile, show full board during countdown
+    setCameraForCountdown();
+
     // NO overlay - just show on floor tiles
     for (let i = 3; i >= 1; i--) {
         showCountdownOnFloor(i);
@@ -843,6 +901,9 @@ async function runCountdown() {
     flashAllTilesGreen();
     playCountdownSound(0);
     await sleep(400);
+
+    // Transition camera to gameplay view before starting level
+    transitionCameraToGameplay();
 
     GameState.isCountingDown = false;
     initializeLevel();
