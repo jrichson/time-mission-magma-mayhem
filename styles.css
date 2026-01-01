@@ -507,6 +507,70 @@ body {
 .turtle-icon .turtle-leg.bl { bottom: 4px; left: 10px; }
 .turtle-icon .turtle-leg.br { bottom: 4px; right: 10px; }
 
+/* DELOREAN - Back to the Future car */
+.delorean-icon .delorean-body {
+    position: absolute;
+    width: 44px;
+    height: 14px;
+    background: linear-gradient(180deg, #d0d0d0 0%, #a0a0a0 100%);
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+.delorean-icon .delorean-cabin {
+    position: absolute;
+    width: 26px;
+    height: 12px;
+    background: linear-gradient(180deg, #c0c0c0 0%, #909090 100%);
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px 2px 0 0;
+}
+
+.delorean-icon .delorean-window {
+    position: absolute;
+    width: 20px;
+    height: 8px;
+    background: #1a1a2e;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 1px;
+}
+
+.delorean-icon .delorean-wheel {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #222;
+    border-radius: 50%;
+}
+
+.delorean-icon .delorean-wheel.fl { bottom: 8px; left: 8px; }
+.delorean-icon .delorean-wheel.fr { bottom: 8px; right: 8px; }
+.delorean-icon .delorean-wheel.bl { bottom: 8px; left: 14px; }
+.delorean-icon .delorean-wheel.br { bottom: 8px; right: 14px; }
+
+.delorean-icon .delorean-glow {
+    position: absolute;
+    width: 40px;
+    height: 3px;
+    background: #00ffff;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px #00ffff, 0 0 12px #00ffff;
+    animation: deloreanGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes deloreanGlow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
 /* Start Button */
 .start-btn {
     font-family: 'Press Start 2P', monospace !important;

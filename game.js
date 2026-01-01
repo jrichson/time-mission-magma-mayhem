@@ -34,7 +34,8 @@ const CONFIG = {
         chicken: { body: 0xffdd33, accent: 0xff6622, secondary: 0xeecc22 },
         banana: { body: 0xffe135, accent: 0x8b4513, secondary: 0xffeecc },
         skier: { body: 0x2255cc, accent: 0xff4444, secondary: 0xffeecc },
-        turtle: { body: 0x2d8659, accent: 0x8b4513, secondary: 0x3cb371 }
+        turtle: { body: 0x2d8659, accent: 0x8b4513, secondary: 0x3cb371 },
+        delorean: { body: 0xc0c0c0, accent: 0x00ffff, secondary: 0x333333 }
     }
 };
 
@@ -123,54 +124,58 @@ const NUMBER_PATTERNS = {
 function getCameraSettings() {
     const aspect = window.innerWidth / window.innerHeight;
     const isMobile = window.innerWidth <= 768;
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     // Base frustum size and zoom
     let frustumSize = 16;
     let zoom = 1.1;
     let followPlayer = false;
 
-    if (isMobile && aspect < 1) {
+    // Enable camera follow on mobile/touch devices
+    if ((isMobile || isTouchDevice) && aspect < 1) {
         // Portrait mobile - larger zoom, follow player
-        frustumSize = 12;
-        zoom = 1.15;
+        frustumSize = 10;
+        zoom = 1.3;
         followPlayer = true;
-    } else if (isMobile) {
+    } else if (isMobile || isTouchDevice) {
         // Landscape mobile
-        frustumSize = 14;
-        zoom = 1.0;
+        frustumSize = 12;
+        zoom = 1.1;
         followPlayer = true;
     }
 
-    return { aspect, frustumSize, zoom, followPlayer, isMobile };
+    return { aspect, frustumSize, zoom, followPlayer, isMobile: isMobile || isTouchDevice };
 }
 
 // Camera tracking state for mobile
 const CameraState = {
-    targetLookAt: { x: 6, y: 0, z: 8 },
-    currentLookAt: { x: 6, y: 0, z: 8 },
-    smoothSpeed: 0.1 // How fast camera follows (0-1)
+    targetLookAt: { x: 6, y: 0, z: 12 },
+    currentLookAt: { x: 6, y: 0, z: 12 },
+    smoothSpeed: 0.15, // How fast camera follows (0-1, higher = faster)
+    initialized: false
 };
 
 function updateCameraFollow() {
     const settings = getCameraSettings();
-    if (!settings.followPlayer || !GameState.isPlaying) return;
+    if (!settings.followPlayer) return;
 
-    // Target camera on player position, biased slightly ahead (toward top of screen)
+    // Target camera on player position
     const playerX = GameState.playerPosition.x;
     const playerZ = GameState.playerPosition.z;
 
-    // Look slightly ahead of player (lower Z = toward top of board)
+    // Center on player with slight bias ahead (lower Z = toward goal)
     CameraState.targetLookAt.x = playerX;
-    CameraState.targetLookAt.z = playerZ - 2;
+    CameraState.targetLookAt.z = playerZ - 1;
 
     // Smoothly interpolate current look position toward target
-    CameraState.currentLookAt.x += (CameraState.targetLookAt.x - CameraState.currentLookAt.x) * CameraState.smoothSpeed;
-    CameraState.currentLookAt.z += (CameraState.targetLookAt.z - CameraState.currentLookAt.z) * CameraState.smoothSpeed;
+    const speed = CameraState.smoothSpeed;
+    CameraState.currentLookAt.x += (CameraState.targetLookAt.x - CameraState.currentLookAt.x) * speed;
+    CameraState.currentLookAt.z += (CameraState.targetLookAt.z - CameraState.currentLookAt.z) * speed;
 
-    // Camera follows the look target - isometric offset from look point
-    const offsetX = 12;
-    const offsetY = 15;
-    const offsetZ = 12;
+    // Camera position offset for isometric view
+    const offsetX = 10;
+    const offsetY = 12;
+    const offsetZ = 10;
 
     camera.position.set(
         CameraState.currentLookAt.x + offsetX,
@@ -178,28 +183,31 @@ function updateCameraFollow() {
         CameraState.currentLookAt.z + offsetZ
     );
     camera.lookAt(CameraState.currentLookAt.x, 0, CameraState.currentLookAt.z);
+    camera.updateProjectionMatrix();
 }
 
 function resetCameraToPlayer() {
-    // Instantly center camera on player (used when level starts or respawn)
     const settings = getCameraSettings();
     if (!settings.followPlayer) return;
 
+    // Instantly snap camera to player position
     CameraState.currentLookAt.x = GameState.playerPosition.x;
-    CameraState.currentLookAt.z = GameState.playerPosition.z - 2;
+    CameraState.currentLookAt.z = GameState.playerPosition.z - 1;
     CameraState.targetLookAt.x = CameraState.currentLookAt.x;
     CameraState.targetLookAt.z = CameraState.currentLookAt.z;
+    CameraState.initialized = true;
 
     // Apply immediately
-    const offsetX = 12;
-    const offsetY = 15;
-    const offsetZ = 12;
+    const offsetX = 10;
+    const offsetY = 12;
+    const offsetZ = 10;
     camera.position.set(
         CameraState.currentLookAt.x + offsetX,
         offsetY,
         CameraState.currentLookAt.z + offsetZ
     );
     camera.lookAt(CameraState.currentLookAt.x, 0, CameraState.currentLookAt.z);
+    camera.updateProjectionMatrix();
 }
 
 function initThreeJS() {
@@ -287,6 +295,7 @@ function createPlayer() {
         case 'banana': createBananaManModel(playerGroup, colors); break;
         case 'skier': createSkierModel(playerGroup, colors); break;
         case 'turtle': createTurtleModel(playerGroup, colors); break;
+        case 'delorean': createDeloreanModel(playerGroup, colors); break;
     }
 
     playerGroup.position.set(GameState.playerPosition.x, 0, GameState.playerPosition.z);
@@ -587,6 +596,99 @@ function createTurtleModel(group, colors) {
     const tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.12), skinMat);
     tail.position.set(0, 0.1, -0.32);
     group.add(tail);
+}
+
+function createDeloreanModel(group, colors) {
+    // DeLorean DMC-12 from Back to the Future - blocky voxel style
+    const bodyMat = new THREE.MeshStandardMaterial({ color: colors.body, roughness: 0.3, metalness: 0.8, flatShading: true });
+    const glowMat = new THREE.MeshStandardMaterial({ color: colors.accent, roughness: 0.2, metalness: 0.5, emissive: colors.accent, emissiveIntensity: 0.5, flatShading: true });
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.2, metalness: 0.3, flatShading: true });
+
+    // Main body - lower section
+    const bodyLower = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.8), bodyMat);
+    bodyLower.position.y = 0.12;
+    bodyLower.castShadow = true;
+    group.add(bodyLower);
+
+    // Hood (front)
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.06, 0.25), bodyMat);
+    hood.position.set(0, 0.2, 0.28);
+    hood.castShadow = true;
+    group.add(hood);
+
+    // Trunk (back)
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.08, 0.2), bodyMat);
+    trunk.position.set(0, 0.2, -0.3);
+    trunk.castShadow = true;
+    group.add(trunk);
+
+    // Cabin
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.14, 0.32), bodyMat);
+    cabin.position.set(0, 0.3, 0);
+    cabin.castShadow = true;
+    group.add(cabin);
+
+    // Windows
+    const windowFront = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.02), windowMat);
+    windowFront.position.set(0, 0.32, 0.16);
+    group.add(windowFront);
+
+    const windowBack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.02), windowMat);
+    windowBack.position.set(0, 0.32, -0.16);
+    group.add(windowBack);
+
+    // Side windows
+    [-0.24, 0.24].forEach(x => {
+        const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.1, 0.26), windowMat);
+        sideWindow.position.set(x, 0.32, 0);
+        group.add(sideWindow);
+    });
+
+    // Wheels
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9, flatShading: true });
+    const wheelPositions = [
+        { x: -0.22, z: 0.24 }, { x: 0.22, z: 0.24 },
+        { x: -0.22, z: -0.24 }, { x: 0.22, z: -0.24 }
+    ];
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.14), wheelMat);
+        wheel.position.set(pos.x, 0.07, pos.z);
+        group.add(wheel);
+    });
+
+    // Flux capacitor glow strips on sides
+    [-0.26, 0.26].forEach(x => {
+        const glowStrip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.04, 0.5), glowMat);
+        glowStrip.position.set(x, 0.16, 0);
+        group.add(glowStrip);
+    });
+
+    // Time circuit display on back
+    const timeCircuit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.02), glowMat);
+    timeCircuit.position.set(0, 0.24, -0.41);
+    group.add(timeCircuit);
+
+    // Headlights
+    const headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffffee, emissiveIntensity: 0.3, flatShading: true });
+    [-0.16, 0.16].forEach(x => {
+        const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.02), headlightMat);
+        headlight.position.set(x, 0.14, 0.41);
+        group.add(headlight);
+    });
+
+    // Taillights (red glow)
+    const taillightMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3, flatShading: true });
+    [-0.16, 0.16].forEach(x => {
+        const taillight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.02), taillightMat);
+        taillight.position.set(x, 0.14, -0.41);
+        group.add(taillight);
+    });
+
+    // DMC logo placeholder on back
+    const logoMat = new THREE.MeshStandardMaterial({ color: 0x888888, flatShading: true });
+    const logo = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.01), logoMat);
+    logo.position.set(0, 0.16, -0.41);
+    group.add(logo);
 }
 
 // ============================================
@@ -1060,6 +1162,18 @@ function addSpiralPattern(speed = 0.6) {
     });
 }
 
+// Rolling X pattern - multiple X shapes that sweep down the board
+function addRollingX(count = 3, speed = 0.8, spacing = 5) {
+    for (let i = 0; i < count; i++) {
+        GameState.lavaPatterns.push({
+            type: 'rolling_x',
+            offset: i * spacing,
+            speed: speed,
+            size: 3
+        });
+    }
+}
+
 function generateLavaPatterns() {
     GameState.lavaPatterns = [];
     const level = GameState.currentLevel;
@@ -1088,10 +1202,9 @@ function generateLavaPatterns() {
             break;
 
         case 4:
-            // GREEN PERIMETER LEVEL - lots of safe space, intense center
+            // ROLLING X LEVEL - multiple X patterns sweeping down the board
             // This level uses green perimeter (set in generateSafeIslands)
-            addDiagonalSweep(1, 0.7);
-            addDiagonalSweep(-1, 0.7);
+            addRollingX(3, 0.6, 6); // 3 X patterns, spaced 6 apart
             break;
 
         case 5:
@@ -1253,6 +1366,7 @@ function updateLavaPatterns(deltaTime) {
             case 'spiral': updateSpiralPattern(pattern, time); break;
             case 'gray_pulse': updateGrayPulse(pattern, time); break;
             case 'checkerboard_pulse': updateCheckerboardPulse(pattern, time); break;
+            case 'rolling_x': updateRollingX(pattern, time, baseSpeed); break;
         }
     });
 
@@ -1485,6 +1599,33 @@ function updateSpiralPattern(pattern, time) {
     }
 }
 
+// Rolling X pattern - X shapes that roll down the board
+function updateRollingX(pattern, time, baseSpeed) {
+    const progress = (time / baseSpeed) * pattern.speed;
+    const totalHeight = CONFIG.GRID.HEIGHT + pattern.size * 2;
+    const currentZ = ((progress + pattern.offset) % totalHeight) - pattern.size;
+
+    const centerX = Math.floor(CONFIG.GRID.WIDTH / 2);
+    const size = pattern.size;
+
+    // Draw X shape - two diagonals crossing
+    for (let i = -size; i <= size; i++) {
+        // First diagonal: goes from top-left to bottom-right
+        const z1 = Math.floor(currentZ + i);
+        const x1 = centerX + i;
+        if (x1 >= 0 && x1 < CONFIG.GRID.WIDTH && z1 >= 0 && z1 < CONFIG.GRID.HEIGHT - 2) {
+            GameState.lavaTiles.add(`${x1},${z1}`);
+        }
+
+        // Second diagonal: goes from top-right to bottom-left (crossing)
+        const z2 = Math.floor(currentZ + i);
+        const x2 = centerX - i;
+        if (x2 >= 0 && x2 < CONFIG.GRID.WIDTH && z2 >= 0 && z2 < CONFIG.GRID.HEIGHT - 2) {
+            GameState.lavaTiles.add(`${x2},${z2}`);
+        }
+    }
+}
+
 // Gray pulse - ALL non-safe, non-collectible tiles pulse red on/off
 function updateGrayPulse(pattern, time) {
     const pulseOn = Math.sin(time / pattern.interval * Math.PI) > 0;
@@ -1548,10 +1689,13 @@ function movePlayer(dx, dz) {
     GameState.hopStartPos = { x: playerMesh.position.x, y: playerMesh.position.y, z: playerMesh.position.z };
     GameState.hopEndPos = { x: newX, y: 0, z: newZ };
 
-    if (dz < 0) playerMesh.rotation.y = 0;
-    else if (dz > 0) playerMesh.rotation.y = Math.PI;
-    else if (dx < 0) playerMesh.rotation.y = Math.PI / 2;
-    else if (dx > 0) playerMesh.rotation.y = -Math.PI / 2;
+    // Rotation for isometric view - player faces direction of movement
+    // Camera is at 45 degrees, so we rotate accordingly
+    // -Math.PI/4 offset accounts for isometric camera angle
+    if (dz < 0) playerMesh.rotation.y = -Math.PI / 4;           // Forward (up on board)
+    else if (dz > 0) playerMesh.rotation.y = Math.PI * 3 / 4;   // Back (down on board)
+    else if (dx < 0) playerMesh.rotation.y = Math.PI / 4;       // Left
+    else if (dx > 0) playerMesh.rotation.y = -Math.PI * 3 / 4;  // Right
 
     GameState.playerPosition.x = newX;
     GameState.playerPosition.z = newZ;
@@ -2300,21 +2444,30 @@ function handleSwipe(touchEndX, touchEndY) {
         return;
     }
 
-    // Map swipe to isometric grid movement
-    if (absDeltaX > absDeltaY) {
-        // Horizontal swipe dominates
-        if (deltaX > 0) {
-            movePlayer(1, 0); // Swipe right = move right in grid
-        } else {
-            movePlayer(-1, 0); // Swipe left = move left in grid
-        }
+    // ISOMETRIC SWIPE MAPPING:
+    // Board is rotated 45 degrees - camera at top-right looking at bottom-left
+    // Swipe NE (up-right on screen) = move forward on board = -Z (toward top-left of board)
+    // Swipe SW (down-left on screen) = move backward = +Z (toward bottom-right)
+    // Swipe NW (up-left on screen) = move left on board = -X
+    // Swipe SE (down-right on screen) = move right on board = +X
+
+    // Calculate swipe angle to determine direction
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+    // Angle: 0=right, 90=down, 180/-180=left, -90=up
+
+    // Map to 4 isometric directions (45 degree sectors)
+    if (angle >= -45 && angle < 45) {
+        // Swipe RIGHT (East) -> move right on board (+X)
+        movePlayer(1, 0);
+    } else if (angle >= 45 && angle < 135) {
+        // Swipe DOWN (South) -> move back on board (+Z)
+        movePlayer(0, 1);
+    } else if (angle >= 135 || angle < -135) {
+        // Swipe LEFT (West) -> move left on board (-X)
+        movePlayer(-1, 0);
     } else {
-        // Vertical swipe dominates
-        if (deltaY > 0) {
-            movePlayer(0, 1); // Swipe down = move down/back in grid
-        } else {
-            movePlayer(0, -1); // Swipe up = move up/forward in grid
-        }
+        // Swipe UP (North) -> move forward on board (-Z)
+        movePlayer(0, -1);
     }
 }
 
