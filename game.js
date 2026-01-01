@@ -127,31 +127,31 @@ function getCameraSettings() {
     // Base frustum size and zoom
     let frustumSize = 16;
     let zoom = 1.1;
-    // Camera offset for positioning board on screen
-    let cameraOffsetY = 0;
+    // Camera offset for positioning board on screen (positive = look more toward player start)
+    let cameraOffsetZ = 0;
 
     if (isMobile && aspect < 1) {
-        // Portrait mobile - make board larger and position higher
+        // Portrait mobile - make board larger and position to show player
         // Larger zoom = closer/bigger board
         frustumSize = 14;
-        zoom = 1.0;
-        // Offset to move view up (board appears higher on screen)
-        cameraOffsetY = 3;
+        zoom = 1.05;
+        // Offset to shift view toward player starting position (bottom of grid)
+        cameraOffsetZ = 2;
     } else if (isMobile) {
         // Landscape mobile
         frustumSize = 16;
         zoom = 1.0;
-        cameraOffsetY = 0;
+        cameraOffsetZ = 0;
     }
 
-    return { aspect, frustumSize, zoom, cameraOffsetY };
+    return { aspect, frustumSize, zoom, cameraOffsetZ };
 }
 
 function initThreeJS() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.COLORS.BACKGROUND);
 
-    const { aspect, frustumSize, zoom, cameraOffsetY } = getCameraSettings();
+    const { aspect, frustumSize, zoom, cameraOffsetZ } = getCameraSettings();
     camera = new THREE.OrthographicCamera(
         -frustumSize * aspect / 2,
         frustumSize * aspect / 2,
@@ -164,9 +164,9 @@ function initThreeJS() {
     const gridCenterX = CONFIG.GRID.WIDTH / 2;
     const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
 
-    // Position camera - offset moves the view up on mobile
+    // Position camera - offset shifts view toward player starting position on mobile
     camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
-    camera.lookAt(gridCenterX, cameraOffsetY, gridCenterZ - cameraOffsetY);
+    camera.lookAt(gridCenterX, 0, gridCenterZ + cameraOffsetZ);
     camera.zoom = zoom;
     camera.updateProjectionMatrix();
 
@@ -208,7 +208,7 @@ function setupLighting() {
 }
 
 function onWindowResize() {
-    const { aspect, frustumSize, zoom, cameraOffsetY } = getCameraSettings();
+    const { aspect, frustumSize, zoom, cameraOffsetZ } = getCameraSettings();
     camera.left = -frustumSize * aspect / 2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
@@ -218,7 +218,7 @@ function onWindowResize() {
     // Update camera look target for mobile offset
     const gridCenterX = CONFIG.GRID.WIDTH / 2;
     const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
-    camera.lookAt(gridCenterX, cameraOffsetY, gridCenterZ - cameraOffsetY);
+    camera.lookAt(gridCenterX, 0, gridCenterZ + cameraOffsetZ);
 
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -2176,22 +2176,28 @@ function setupTouchControls() {
     // Use document for better touch capture on iOS
     document.addEventListener('touchstart', (e) => {
         // Only handle touches on game area, not UI buttons
-        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn')) {
+        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn, .overlay:not(.hidden)')) {
             return;
         }
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
+        if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+            console.log('Touch start:', touchStartX, touchStartY);
+        }
     }, { passive: true });
 
     document.addEventListener('touchend', (e) => {
         // Only handle touches on game area, not UI buttons
-        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn')) {
+        if (e.target.closest('.game-btn, .start-btn, .char-option, .music-btn, .overlay:not(.hidden)')) {
             return;
         }
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        handleSwipe(touchEndX, touchEndY);
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            console.log('Touch end:', touchEndX, touchEndY);
+            handleSwipe(touchEndX, touchEndY);
+        }
     }, { passive: true });
 
     // Prevent scrolling during gameplay
@@ -2209,6 +2215,8 @@ function handleSwipe(touchEndX, touchEndY) {
     const absDeltaY = Math.abs(deltaY);
     const elapsed = Date.now() - touchStartTime;
 
+    console.log('Swipe delta:', deltaX, deltaY, 'elapsed:', elapsed, 'isPlaying:', GameState.isPlaying);
+
     // Check if it's a tap (short time, small movement)
     if (elapsed < TAP_THRESHOLD && Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
         handleTap();
@@ -2217,10 +2225,14 @@ function handleSwipe(touchEndX, touchEndY) {
 
     // Check if swipe is significant enough
     if (Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
+        console.log('Swipe too small, ignoring');
         return;
     }
 
-    if (!GameState.isPlaying || GameState.isPaused || GameState.isCountingDown) return;
+    if (!GameState.isPlaying || GameState.isPaused || GameState.isCountingDown) {
+        console.log('Game not in playable state');
+        return;
+    }
 
     // Map swipe to isometric grid movement
     // In isometric view with camera at top-right looking down-left:
@@ -2232,15 +2244,19 @@ function handleSwipe(touchEndX, touchEndY) {
     if (absDeltaX > absDeltaY) {
         // Horizontal swipe dominates
         if (deltaX > 0) {
+            console.log('Moving right');
             movePlayer(1, 0); // Swipe right = move right in grid
         } else {
+            console.log('Moving left');
             movePlayer(-1, 0); // Swipe left = move left in grid
         }
     } else {
         // Vertical swipe dominates
         if (deltaY > 0) {
+            console.log('Moving down');
             movePlayer(0, 1); // Swipe down = move down/back in grid
         } else {
+            console.log('Moving up');
             movePlayer(0, -1); // Swipe up = move up/forward in grid
         }
     }
