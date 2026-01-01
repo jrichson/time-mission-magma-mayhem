@@ -34,8 +34,7 @@ const CONFIG = {
         chicken: { body: 0xffdd33, accent: 0xff6622, secondary: 0xeecc22 },
         banana: { body: 0xffe135, accent: 0x8b4513, secondary: 0xffeecc },
         skier: { body: 0x2255cc, accent: 0xff4444, secondary: 0xffeecc },
-        turtle: { body: 0x2d8659, accent: 0x8b4513, secondary: 0x3cb371 },
-        delorean: { body: 0xc0c0c0, accent: 0x00ffff, secondary: 0x333333 }
+        turtle: { body: 0x2d8659, accent: 0x8b4513, secondary: 0x3cb371 }
     }
 };
 
@@ -133,14 +132,14 @@ function getCameraSettings() {
 
     // Enable camera follow on mobile/touch devices
     if ((isMobile || isTouchDevice) && aspect < 1) {
-        // Portrait mobile - larger zoom, follow player
-        frustumSize = 10;
-        zoom = 1.3;
+        // Portrait mobile - zoomed out 20% (was 10/1.3, now 12/1.04)
+        frustumSize = 12;
+        zoom = 1.04;
         followPlayer = true;
     } else if (isMobile || isTouchDevice) {
-        // Landscape mobile
-        frustumSize = 12;
-        zoom = 1.1;
+        // Landscape mobile - zoomed out 20%
+        frustumSize = 14.4;
+        zoom = 0.88;
         followPlayer = true;
     }
 
