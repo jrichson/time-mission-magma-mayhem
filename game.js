@@ -127,31 +127,86 @@ function getCameraSettings() {
     // Base frustum size and zoom
     let frustumSize = 16;
     let zoom = 1.1;
-    // Camera offset for positioning board on screen (positive = look more toward player start)
-    let cameraOffsetZ = 0;
+    let followPlayer = false;
 
     if (isMobile && aspect < 1) {
-        // Portrait mobile - make board larger and position to show player
-        // Larger zoom = closer/bigger board
-        frustumSize = 14;
-        zoom = 1.05;
-        // Offset to shift view toward player starting position (bottom of grid)
-        cameraOffsetZ = 2;
+        // Portrait mobile - larger zoom, follow player
+        frustumSize = 12;
+        zoom = 1.15;
+        followPlayer = true;
     } else if (isMobile) {
         // Landscape mobile
-        frustumSize = 16;
+        frustumSize = 14;
         zoom = 1.0;
-        cameraOffsetZ = 0;
+        followPlayer = true;
     }
 
-    return { aspect, frustumSize, zoom, cameraOffsetZ };
+    return { aspect, frustumSize, zoom, followPlayer, isMobile };
+}
+
+// Camera tracking state for mobile
+const CameraState = {
+    targetLookAt: { x: 6, y: 0, z: 8 },
+    currentLookAt: { x: 6, y: 0, z: 8 },
+    smoothSpeed: 0.1 // How fast camera follows (0-1)
+};
+
+function updateCameraFollow() {
+    const settings = getCameraSettings();
+    if (!settings.followPlayer || !GameState.isPlaying) return;
+
+    // Target camera on player position, biased slightly ahead (toward top of screen)
+    const playerX = GameState.playerPosition.x;
+    const playerZ = GameState.playerPosition.z;
+
+    // Look slightly ahead of player (lower Z = toward top of board)
+    CameraState.targetLookAt.x = playerX;
+    CameraState.targetLookAt.z = playerZ - 2;
+
+    // Smoothly interpolate current look position toward target
+    CameraState.currentLookAt.x += (CameraState.targetLookAt.x - CameraState.currentLookAt.x) * CameraState.smoothSpeed;
+    CameraState.currentLookAt.z += (CameraState.targetLookAt.z - CameraState.currentLookAt.z) * CameraState.smoothSpeed;
+
+    // Camera follows the look target - isometric offset from look point
+    const offsetX = 12;
+    const offsetY = 15;
+    const offsetZ = 12;
+
+    camera.position.set(
+        CameraState.currentLookAt.x + offsetX,
+        offsetY,
+        CameraState.currentLookAt.z + offsetZ
+    );
+    camera.lookAt(CameraState.currentLookAt.x, 0, CameraState.currentLookAt.z);
+}
+
+function resetCameraToPlayer() {
+    // Instantly center camera on player (used when level starts or respawn)
+    const settings = getCameraSettings();
+    if (!settings.followPlayer) return;
+
+    CameraState.currentLookAt.x = GameState.playerPosition.x;
+    CameraState.currentLookAt.z = GameState.playerPosition.z - 2;
+    CameraState.targetLookAt.x = CameraState.currentLookAt.x;
+    CameraState.targetLookAt.z = CameraState.currentLookAt.z;
+
+    // Apply immediately
+    const offsetX = 12;
+    const offsetY = 15;
+    const offsetZ = 12;
+    camera.position.set(
+        CameraState.currentLookAt.x + offsetX,
+        offsetY,
+        CameraState.currentLookAt.z + offsetZ
+    );
+    camera.lookAt(CameraState.currentLookAt.x, 0, CameraState.currentLookAt.z);
 }
 
 function initThreeJS() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(CONFIG.COLORS.BACKGROUND);
 
-    const { aspect, frustumSize, zoom, cameraOffsetZ } = getCameraSettings();
+    const { aspect, frustumSize, zoom } = getCameraSettings();
     camera = new THREE.OrthographicCamera(
         -frustumSize * aspect / 2,
         frustumSize * aspect / 2,
@@ -164,9 +219,9 @@ function initThreeJS() {
     const gridCenterX = CONFIG.GRID.WIDTH / 2;
     const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
 
-    // Position camera - offset shifts view toward player starting position on mobile
+    // Position camera - centered on grid initially
     camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
-    camera.lookAt(gridCenterX, 0, gridCenterZ + cameraOffsetZ);
+    camera.lookAt(gridCenterX, 0, gridCenterZ);
     camera.zoom = zoom;
     camera.updateProjectionMatrix();
 
@@ -208,18 +263,12 @@ function setupLighting() {
 }
 
 function onWindowResize() {
-    const { aspect, frustumSize, zoom, cameraOffsetZ } = getCameraSettings();
+    const { aspect, frustumSize, zoom } = getCameraSettings();
     camera.left = -frustumSize * aspect / 2;
     camera.right = frustumSize * aspect / 2;
     camera.top = frustumSize / 2;
     camera.bottom = -frustumSize / 2;
     camera.zoom = zoom;
-
-    // Update camera look target for mobile offset
-    const gridCenterX = CONFIG.GRID.WIDTH / 2;
-    const gridCenterZ = CONFIG.GRID.HEIGHT / 2;
-    camera.lookAt(gridCenterX, 0, gridCenterZ + cameraOffsetZ);
-
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -681,7 +730,6 @@ function flashAllTilesGreen() {
 
 async function runCountdown() {
     GameState.isCountingDown = true;
-    console.log('Starting countdown...');
 
     // NO overlay - just show on floor tiles
     for (let i = 3; i >= 1; i--) {
@@ -696,13 +744,7 @@ async function runCountdown() {
     await sleep(400);
 
     GameState.isCountingDown = false;
-    console.log('Countdown complete, initializing level...');
-    try {
-        initializeLevel();
-        console.log('Level initialized successfully');
-    } catch (e) {
-        console.error('Error initializing level:', e);
-    }
+    initializeLevel();
 }
 
 function sleep(ms) {
@@ -1568,6 +1610,9 @@ function respawnPlayer() {
     playerMesh.position.set(6, 0, 14);
     playerMesh.rotation.y = 0;
 
+    // Reset camera to follow respawned player
+    resetCameraToPlayer();
+
     GameState.invincible = true;
     GameState.invincibleUntil = Date.now() + 2500;
 
@@ -1613,6 +1658,9 @@ function initializeLevel() {
         playerMesh.position.set(6, 0, 14);
         playerMesh.rotation.y = 0;
     }
+
+    // Reset camera to follow player on mobile
+    resetCameraToPlayer();
 
     GameState.isPlaying = true;
     updateHUD();
@@ -1763,6 +1811,22 @@ function restartGame() {
 function initAudio() {
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // iOS requires user interaction to enable audio
+        // Add one-time handler to resume audio context on first touch/click
+        const resumeAudio = () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('AudioContext resumed');
+                });
+            }
+        };
+
+        // Listen for user interaction to resume audio
+        document.addEventListener('touchstart', resumeAudio, { once: true });
+        document.addEventListener('touchend', resumeAudio, { once: true });
+        document.addEventListener('click', resumeAudio, { once: true });
+
     } catch (e) {
         console.log('Web Audio not supported');
     }
@@ -1770,9 +1834,17 @@ function initAudio() {
 
 function startMusic() {
     if (!audioContext || GameState.musicPlaying) return;
-    if (audioContext.state === 'suspended') audioContext.resume();
-    GameState.musicPlaying = true;
-    playTechnoLoop();
+
+    // Resume audio context if suspended (iOS requirement)
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            GameState.musicPlaying = true;
+            playTechnoLoop();
+        });
+    } else {
+        GameState.musicPlaying = true;
+        playTechnoLoop();
+    }
 }
 
 function stopMusic() {
@@ -2183,7 +2255,6 @@ function setupTouchControls() {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
             touchStartTime = Date.now();
-            console.log('Touch start:', touchStartX, touchStartY);
         }
     }, { passive: true });
 
@@ -2195,7 +2266,6 @@ function setupTouchControls() {
         if (e.changedTouches && e.changedTouches.length > 0) {
             const touchEndX = e.changedTouches[0].clientX;
             const touchEndY = e.changedTouches[0].clientY;
-            console.log('Touch end:', touchEndX, touchEndY);
             handleSwipe(touchEndX, touchEndY);
         }
     }, { passive: true });
@@ -2215,8 +2285,6 @@ function handleSwipe(touchEndX, touchEndY) {
     const absDeltaY = Math.abs(deltaY);
     const elapsed = Date.now() - touchStartTime;
 
-    console.log('Swipe delta:', deltaX, deltaY, 'elapsed:', elapsed, 'isPlaying:', GameState.isPlaying);
-
     // Check if it's a tap (short time, small movement)
     if (elapsed < TAP_THRESHOLD && Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
         handleTap();
@@ -2225,38 +2293,26 @@ function handleSwipe(touchEndX, touchEndY) {
 
     // Check if swipe is significant enough
     if (Math.max(absDeltaX, absDeltaY) < SWIPE_THRESHOLD) {
-        console.log('Swipe too small, ignoring');
         return;
     }
 
     if (!GameState.isPlaying || GameState.isPaused || GameState.isCountingDown) {
-        console.log('Game not in playable state');
         return;
     }
 
     // Map swipe to isometric grid movement
-    // In isometric view with camera at top-right looking down-left:
-    // Swipe UP on screen = move toward top of screen = -Z in grid (forward)
-    // Swipe DOWN on screen = move toward bottom = +Z in grid (backward)
-    // Swipe LEFT on screen = -X in grid (left)
-    // Swipe RIGHT on screen = +X in grid (right)
-
     if (absDeltaX > absDeltaY) {
         // Horizontal swipe dominates
         if (deltaX > 0) {
-            console.log('Moving right');
             movePlayer(1, 0); // Swipe right = move right in grid
         } else {
-            console.log('Moving left');
             movePlayer(-1, 0); // Swipe left = move left in grid
         }
     } else {
         // Vertical swipe dominates
         if (deltaY > 0) {
-            console.log('Moving down');
             movePlayer(0, 1); // Swipe down = move down/back in grid
         } else {
-            console.log('Moving up');
             movePlayer(0, -1); // Swipe up = move up/forward in grid
         }
     }
@@ -2365,6 +2421,7 @@ function animate() {
     if (GameState.isPlaying && !GameState.isPaused && !GameState.isCountingDown) {
         updateLavaPatterns(clock.getDelta());
         updateHopAnimation();
+        updateCameraFollow();
         updateTimeBasedScore();
         updateHUD();
 
