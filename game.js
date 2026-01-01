@@ -131,29 +131,29 @@ function getCameraSettings(forCountdown = false) {
     let zoom = 1.1;
     let followPlayer = false;
 
-    // Mobile settings
+    // Mobile settings - need much more aggressive zoom out
     if (isMobileOrTouch && aspect < 1) {
         if (forCountdown) {
-            // Portrait mobile COUNTDOWN - show entire board
-            frustumSize = 20;
-            zoom = 0.7;
+            // Portrait mobile COUNTDOWN - show ENTIRE 12x16 board
+            frustumSize = 28;
+            zoom = 0.55;
             followPlayer = false;
         } else {
-            // Portrait mobile GAMEPLAY - zoomed out 25% more (was 12/1.04, now 15/0.78)
-            frustumSize = 15;
-            zoom = 0.78;
+            // Portrait mobile GAMEPLAY - zoomed out to see more tiles
+            frustumSize = 22;
+            zoom = 0.6;
             followPlayer = true;
         }
     } else if (isMobileOrTouch) {
         if (forCountdown) {
             // Landscape mobile COUNTDOWN - show entire board
-            frustumSize = 18;
-            zoom = 0.8;
+            frustumSize = 24;
+            zoom = 0.6;
             followPlayer = false;
         } else {
-            // Landscape mobile GAMEPLAY - zoomed out 25% more
-            frustumSize = 18;
-            zoom = 0.66;
+            // Landscape mobile GAMEPLAY - zoomed out
+            frustumSize = 20;
+            zoom = 0.55;
             followPlayer = true;
         }
     }
@@ -186,8 +186,9 @@ function setCameraForCountdown() {
     camera.bottom = -settings.frustumSize / 2;
     camera.zoom = settings.zoom;
 
-    // Center camera on entire grid
-    camera.position.set(gridCenterX + 12, 15, gridCenterZ + 12);
+    // Position camera high and far to see entire board
+    // Isometric offset from center, but higher up to see more
+    camera.position.set(gridCenterX + 14, 20, gridCenterZ + 14);
     camera.lookAt(gridCenterX, 0, gridCenterZ);
     camera.updateProjectionMatrix();
 }
