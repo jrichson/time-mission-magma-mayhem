@@ -131,29 +131,30 @@ function getCameraSettings(forCountdown = false) {
     let zoom = 1.1;
     let followPlayer = false;
 
-    // Mobile settings - need much more aggressive zoom out
+    // Mobile settings - VERY aggressive zoom out to see full board
     if (isMobileOrTouch && aspect < 1) {
         if (forCountdown) {
             // Portrait mobile COUNTDOWN - show ENTIRE 12x16 board
-            frustumSize = 28;
-            zoom = 0.55;
+            // Grid is 12 wide x 16 tall, need to see it all
+            frustumSize = 40;
+            zoom = 0.4;
             followPlayer = false;
         } else {
-            // Portrait mobile GAMEPLAY - zoomed out to see more tiles
-            frustumSize = 22;
-            zoom = 0.6;
+            // Portrait mobile GAMEPLAY - zoomed out 20% more than previous
+            frustumSize = 32;
+            zoom = 0.45;
             followPlayer = true;
         }
     } else if (isMobileOrTouch) {
         if (forCountdown) {
             // Landscape mobile COUNTDOWN - show entire board
-            frustumSize = 24;
-            zoom = 0.6;
+            frustumSize = 35;
+            zoom = 0.45;
             followPlayer = false;
         } else {
             // Landscape mobile GAMEPLAY - zoomed out
-            frustumSize = 20;
-            zoom = 0.55;
+            frustumSize = 28;
+            zoom = 0.5;
             followPlayer = true;
         }
     }
