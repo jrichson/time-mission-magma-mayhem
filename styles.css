@@ -1403,3 +1403,102 @@ body {
     font-size: 18px;
     color: #00ffff;
 }
+
+/* Book Visit Link - Desktop (bottom of screen) */
+#book-visit-link {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #ffcc00;
+    text-decoration: none;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ffcc00;
+    border-radius: 8px;
+    z-index: 100;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 8px #ffcc00;
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+#book-visit-link:hover {
+    background: rgba(255, 204, 0, 0.2);
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 0 25px rgba(255, 204, 0, 0.5);
+}
+
+/* Win Screen Discount Banner */
+.discount-banner {
+    display: block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: #00ff88;
+    text-decoration: none;
+    padding: 20px 30px;
+    margin: 25px 0;
+    background: linear-gradient(180deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 136, 68, 0.2) 100%);
+    border: 3px solid #00ff88;
+    border-radius: 12px;
+    text-shadow: 0 0 15px #00ff88;
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.4), inset 0 0 20px rgba(0, 255, 136, 0.1);
+    animation: discountPulse 1.5s ease-in-out infinite;
+    transition: all 0.2s ease;
+    line-height: 1.4;
+}
+
+.discount-banner:hover {
+    background: linear-gradient(180deg, rgba(0, 255, 136, 0.35) 0%, rgba(0, 136, 68, 0.35) 100%);
+    transform: scale(1.03);
+    box-shadow: 0 0 50px rgba(0, 255, 136, 0.6), inset 0 0 30px rgba(0, 255, 136, 0.2);
+}
+
+@keyframes discountPulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.4), inset 0 0 20px rgba(0, 255, 136, 0.1); }
+    50% { box-shadow: 0 0 50px rgba(0, 255, 136, 0.7), inset 0 0 30px rgba(0, 255, 136, 0.2); }
+}
+
+.win-content {
+    max-width: 650px;
+}
+
+/* Mobile: Book visit link under score */
+@media (max-width: 768px) {
+    #book-visit-link {
+        position: fixed;
+        bottom: auto;
+        top: calc(55px + env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 7px;
+        padding: 8px 14px;
+        letter-spacing: 0.5px;
+    }
+
+    .discount-banner {
+        font-size: 9px;
+        padding: 14px 18px;
+        margin: 18px 0;
+        line-height: 1.5;
+    }
+
+    .win-content {
+        max-width: 95vw;
+    }
+}
+
+@media (max-width: 400px) {
+    #book-visit-link {
+        font-size: 6px;
+        padding: 6px 10px;
+    }
+
+    .discount-banner {
+        font-size: 7px;
+        padding: 12px 14px;
+    }
+}
