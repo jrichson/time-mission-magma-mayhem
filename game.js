@@ -1921,6 +1921,7 @@ function showLevelCompleteScreen() {
     const earnedScore = Math.max(1, GameState.currentLevelScore);
     document.getElementById('level-score').textContent = `+${earnedScore} points!`;
     document.getElementById('level-complete-screen').classList.remove('hidden');
+    playLevelCompleteChime(); // Play satisfying chime on level complete
 }
 
 function showWinScreen() {
@@ -1928,6 +1929,62 @@ function showWinScreen() {
     const maxScore = CONFIG.LEVELS.TOTAL * GameState.maxLevelScore;
     document.getElementById('win-score').textContent = `Final Score: ${GameState.totalScore}/${maxScore}`;
     document.getElementById('win-screen').classList.remove('hidden');
+    playVictoryFanfare(); // Play big win sound!
+}
+
+// === VICTORY FANFARE - Big celebratory sound for winning the game ===
+function playVictoryFanfare() {
+    if (!audioContext) return;
+    const now = audioContext.currentTime;
+
+    // Epic ascending fanfare
+    const fanfareNotes = [
+        { freq: 261.63, time: 0, dur: 0.15 },      // C4
+        { freq: 329.63, time: 0.15, dur: 0.15 },   // E4
+        { freq: 392.00, time: 0.3, dur: 0.15 },    // G4
+        { freq: 523.25, time: 0.45, dur: 0.3 },    // C5
+        { freq: 659.25, time: 0.75, dur: 0.15 },   // E5
+        { freq: 783.99, time: 0.9, dur: 0.15 },    // G5
+        { freq: 1046.50, time: 1.05, dur: 0.6 },   // C6 (hold)
+    ];
+
+    fanfareNotes.forEach(note => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.freq, now + note.time);
+
+        gain.gain.setValueAtTime(0, now + note.time);
+        gain.gain.linearRampToValueAtTime(0.12, now + note.time + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
+
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        osc.start(now + note.time);
+        osc.stop(now + note.time + note.dur);
+    });
+
+    // Triumphant chord at the end
+    const chordNotes = [523.25, 659.25, 783.99, 1046.50]; // C major
+    chordNotes.forEach(freq => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + 1.2);
+
+        gain.gain.setValueAtTime(0, now + 1.2);
+        gain.gain.linearRampToValueAtTime(0.08, now + 1.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        osc.start(now + 1.2);
+        osc.stop(now + 2.5);
+    });
 }
 
 let isStartingGame = false; // Guard against double-starting
@@ -2064,99 +2121,449 @@ function playTechnoLoop() {
     const now = audioContext.currentTime;
     const level = GameState.currentLevel;
 
-    // BPM increases with level: 120 -> 180
-    const bpm = 120 + (level - 1) * 5;
-    const beat = 60 / bpm;
+    // === 80s SYNTHWAVE SPY THEME - 120 BPM ===
+    const bpm = 120;
+    const beat = 60 / bpm; // 0.5 seconds per beat
+    const barLength = beat * 4; // 2 seconds per bar
 
-    // Intensity scaling based on level (0.0 to 1.0)
+    // Intensity scaling (0.0 to 1.0)
     const intensity = Math.min((level - 1) / 11, 1.0);
 
-    // KICK DRUMS - More complex patterns at higher levels
-    const kickVolume = 0.08 + intensity * 0.04;
-    if (level <= 4) {
-        // Simple 4-on-floor
-        [0, 2, 4, 6].forEach(i => playDrum(now + i * beat, 80 + level * 5, kickVolume));
-    } else if (level <= 8) {
-        // Add offbeat kicks
-        [0, 1.5, 2, 3.5, 4, 5.5, 6, 7.5].forEach(i => playDrum(now + i * beat, 85 + level * 5, kickVolume));
-    } else {
-        // Intense double-time kicks
-        for (let i = 0; i < 16; i++) {
-            playDrum(now + i * (beat / 2), 90 + level * 3, kickVolume * (i % 2 === 0 ? 1 : 0.7));
+    // === SYNTHWAVE PAD - Lush retro atmosphere ===
+    const padVol = 0.025 + intensity * 0.012;
+    // A minor chord for spy feel
+    playSynthwavePad(now, 110.00, padVol, barLength * 4); // A2
+    playSynthwavePad(now, 130.81, padVol * 0.8, barLength * 4); // C3
+    playSynthwavePad(now, 164.81, padVol * 0.6, barLength * 4); // E3
+
+    // === DRIVING KICK - 4 on the floor ===
+    const kickVol = 0.06 + intensity * 0.02;
+    for (let bar = 0; bar < 4; bar++) {
+        for (let i = 0; i < 4; i++) {
+            playSynthwaveKick(now + bar * barLength + i * beat, kickVol);
         }
     }
 
-    // HI-HATS - Faster at higher levels
-    const hihatSpeed = level <= 4 ? 2 : (level <= 8 ? 4 : 8);
-    const hihatVolume = 0.02 + intensity * 0.02;
-    for (let i = 0; i < 8 * hihatSpeed; i++) {
-        playHiHat(now + i * (beat * 8 / (8 * hihatSpeed)), hihatVolume);
+    // === PUNCHY SNARE - Beats 2 and 4 ===
+    const snareVol = 0.04 + intensity * 0.015;
+    for (let bar = 0; bar < 4; bar++) {
+        playSynthwaveSnare(now + bar * barLength + beat, snareVol);
+        playSynthwaveSnare(now + bar * barLength + beat * 3, snareVol);
     }
 
-    // SYNTH MELODY - More complex and higher pitched at higher levels
-    const synthVolume = 0.05 + intensity * 0.04;
-    const baseNote = 130.81 + (level - 1) * 10; // C3 going up
-
-    let melodyNotes;
-    if (level <= 4) {
-        // Simple arpeggio
-        melodyNotes = [baseNote, baseNote * 1.25, baseNote * 1.5, baseNote * 2];
-    } else if (level <= 8) {
-        // More energetic pattern
-        melodyNotes = [baseNote, baseNote * 1.25, baseNote * 1.5, baseNote * 2, baseNote * 1.5, baseNote * 1.25, baseNote * 2, baseNote];
-    } else {
-        // Intense rapid arpeggios
-        melodyNotes = [baseNote, baseNote * 1.5, baseNote * 2, baseNote * 2.5, baseNote * 2, baseNote * 1.5, baseNote * 2, baseNote * 1.25,
-                       baseNote * 1.5, baseNote * 2, baseNote * 2.5, baseNote * 3, baseNote * 2.5, baseNote * 2, baseNote * 1.5, baseNote];
-    }
-
-    const noteLength = beat * 8 / melodyNotes.length;
-    melodyNotes.forEach((freq, i) => {
-        playSynth(now + i * noteLength, freq, synthVolume, noteLength * 0.8);
-    });
-
-    // BASS - Deeper and more aggressive at higher levels
-    const bassVolume = 0.08 + intensity * 0.06;
-    const bassBase = 65.41 - (level > 6 ? 10 : 0); // Lower bass at high levels
-
-    let bassPattern;
-    if (level <= 4) {
-        bassPattern = [bassBase, bassBase, bassBase * 1.25, bassBase * 1.125];
-    } else if (level <= 8) {
-        bassPattern = [bassBase, bassBase * 0.75, bassBase, bassBase * 1.25, bassBase, bassBase * 0.875, bassBase, bassBase * 1.5];
-    } else {
-        // Wobble bass effect for high levels
-        bassPattern = [];
-        for (let i = 0; i < 16; i++) {
-            bassPattern.push(bassBase * (1 + Math.sin(i * 0.5) * 0.25));
+    // === CRISP HI-HATS - 8th notes with accents ===
+    const hihatVol = 0.02 + intensity * 0.01;
+    for (let bar = 0; bar < 4; bar++) {
+        for (let i = 0; i < 8; i++) {
+            const accent = (i % 2 === 0) ? 0.7 : 1;
+            const isOpen = (i === 2 || i === 6); // Open hat on offbeats
+            playSynthwaveHiHat(now + bar * barLength + i * (beat / 2), hihatVol * accent, isOpen);
         }
     }
 
-    const bassNoteLength = beat * 8 / bassPattern.length;
-    bassPattern.forEach((freq, i) => {
-        playBass(now + i * bassNoteLength, freq, bassVolume, bassNoteLength * 0.9);
-    });
-
-    // ADD EXTRA LAYERS AT HIGH LEVELS
-    if (level >= 6) {
-        // Add pad/atmosphere
-        playPad(now, baseNote / 2, 0.03 + intensity * 0.02, beat * 8);
-    }
-
-    if (level >= 9) {
-        // Add lead stabs
-        const stabTimes = [0, 1.5, 3, 4.5, 6];
-        stabTimes.forEach(t => {
-            playStab(now + t * beat, baseNote * 2, 0.04, beat * 0.3);
+    // === ANALOG BASS - Driving synth bass line ===
+    const bassVol = 0.045 + intensity * 0.02;
+    // Spy-style minor key bass pattern
+    const bassPattern = [
+        { note: 110.00, time: 0 },           // A
+        { note: 110.00, time: beat * 0.5 },
+        { note: 110.00, time: beat },
+        { note: 130.81, time: beat * 1.5 },  // C
+        { note: 110.00, time: beat * 2 },
+        { note: 110.00, time: beat * 2.5 },
+        { note: 146.83, time: beat * 3 },    // D
+        { note: 123.47, time: beat * 3.5 },  // B
+    ];
+    for (let bar = 0; bar < 4; bar++) {
+        bassPattern.forEach(p => {
+            playAnalogBass(now + bar * barLength + p.time, p.note, bassVol, beat * 0.4);
         });
     }
 
-    if (level >= 11) {
-        // Add noise sweeps for final levels
-        playNoiseSweep(now, beat * 4, 0.03);
+    // === SYNTHWAVE ARPEGGIO - Classic 80s pattern ===
+    const arpVol = 0.02 + intensity * 0.015;
+    // A minor arpeggio - spy/action feel
+    const arpNotes = [220.00, 261.63, 329.63, 440.00, 329.63, 261.63]; // A3, C4, E4, A4, E4, C4
+    const arpLength = beat / 3; // Triplet feel
+    for (let bar = 0; bar < 4; bar++) {
+        for (let i = 0; i < 12; i++) {
+            const note = arpNotes[i % arpNotes.length];
+            playSynthwaveArp(now + bar * barLength + i * arpLength, note, arpVol, arpLength * 0.8);
+        }
     }
 
-    setTimeout(() => { if (GameState.musicPlaying) playTechnoLoop(); }, beat * 8 * 1000 - 50);
+    // === LEAD SYNTH - Spy melody (level 3+) ===
+    if (level >= 3) {
+        const leadVol = 0.025 + intensity * 0.015;
+        // Simple spy-style motif
+        const leadMelody = [
+            { note: 440.00, time: 0, dur: beat * 0.75 },           // A4
+            { note: 392.00, time: beat, dur: beat * 0.5 },         // G4
+            { note: 440.00, time: beat * 2, dur: beat * 0.75 },    // A4
+            { note: 523.25, time: beat * 3, dur: beat },           // C5
+        ];
+        // Play melody in bars 1 and 3
+        leadMelody.forEach(n => {
+            playSynthwaveLead(now + n.time, n.note, leadVol, n.dur);
+            playSynthwaveLead(now + barLength * 2 + n.time, n.note * 1.06, leadVol * 0.8, n.dur);
+        });
+    }
+
+    // === RETRO STABS - Synth brass hits (level 5+) ===
+    if (level >= 5) {
+        const stabVol = 0.03 + intensity * 0.015;
+        playRetroStab(now + barLength + beat * 3.5, 329.63, stabVol, beat * 0.3);
+        playRetroStab(now + barLength * 3 + beat * 3.5, 349.23, stabVol, beat * 0.3);
+    }
+
+    // === FILTER SWEEP - Rising tension (level 7+) ===
+    if (level >= 7) {
+        playFilterSweep(now, barLength * 4, 0.015 + intensity * 0.01);
+    }
+
+    // === EXTRA PERCUSSION - Toms (level 9+) ===
+    if (level >= 9) {
+        const tomVol = 0.03 + intensity * 0.01;
+        playSynthTom(now + barLength + beat * 3.75, 100, tomVol);
+        playSynthTom(now + barLength * 3 + beat * 3.75, 80, tomVol);
+    }
+
+    // Loop every 4 bars (8 seconds at 120 BPM)
+    setTimeout(() => { if (GameState.musicPlaying) playTechnoLoop(); }, barLength * 4 * 1000 - 50);
+}
+
+// === 80s SYNTHWAVE SOUND FUNCTIONS ===
+
+function playSynthwavePad(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const osc3 = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    // Rich detuned sawtooths for that 80s pad sound
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc3.type = 'triangle';
+    osc1.frequency.setValueAtTime(freq, time);
+    osc2.frequency.setValueAtTime(freq * 1.007, time); // Detuned
+    osc3.frequency.setValueAtTime(freq * 0.993, time); // Detuned other way
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(300, time);
+    filter.frequency.linearRampToValueAtTime(600, time + dur * 0.3);
+    filter.frequency.linearRampToValueAtTime(400, time + dur);
+    filter.Q.value = 1;
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.8);
+    gain.gain.setValueAtTime(vol, time + dur - 0.8);
+    gain.gain.linearRampToValueAtTime(0, time + dur);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    osc3.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc3.start(time);
+    osc1.stop(time + dur);
+    osc2.stop(time + dur);
+    osc3.stop(time + dur);
+}
+
+function playSynthwaveKick(time, vol) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(40, time + 0.08);
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(time);
+    osc.stop(time + 0.3);
+}
+
+function playSynthwaveSnare(time, vol) {
+    if (!audioContext) return;
+    // Tone component
+    const osc = audioContext.createOscillator();
+    const oscGain = audioContext.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(200, time);
+    osc.frequency.exponentialRampToValueAtTime(120, time + 0.05);
+    oscGain.gain.setValueAtTime(vol * 0.7, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+    osc.connect(oscGain);
+    oscGain.connect(audioContext.destination);
+    osc.start(time);
+    osc.stop(time + 0.1);
+
+    // Noise component
+    const bufferSize = audioContext.sampleRate * 0.15;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.12));
+    }
+    const source = audioContext.createBufferSource();
+    const noiseGain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+    source.buffer = buffer;
+    filter.type = 'highpass';
+    filter.frequency.value = 2500;
+    noiseGain.gain.setValueAtTime(vol, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    source.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(audioContext.destination);
+    source.start(time);
+}
+
+function playSynthwaveHiHat(time, vol, isOpen) {
+    if (!audioContext) return;
+    const dur = isOpen ? 0.12 : 0.04;
+    const bufferSize = audioContext.sampleRate * dur;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * (isOpen ? 0.3 : 0.08)));
+    }
+
+    const source = audioContext.createBufferSource();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    source.buffer = buffer;
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+    source.start(time);
+}
+
+function playAnalogBass(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    // Sawtooth + sub for fat 80s bass
+    osc.type = 'sawtooth';
+    osc2.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+    osc2.frequency.setValueAtTime(freq * 0.5, time); // Sub octave
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, time);
+    filter.frequency.exponentialRampToValueAtTime(200, time + dur);
+    filter.Q.value = 4;
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.setValueAtTime(vol * 0.7, time + dur * 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + dur);
+    osc2.stop(time + dur);
+    musicOscillators.push(osc, osc2);
+}
+
+function playSynthwaveArp(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, time);
+    filter.frequency.exponentialRampToValueAtTime(600, time + dur);
+    filter.Q.value = 2;
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(time);
+    osc.stop(time + dur);
+}
+
+function playSynthwaveLead(time, freq, vol, dur) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    // Classic synth lead - square + saw
+    osc.type = 'square';
+    osc2.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, time);
+    osc2.frequency.setValueAtTime(freq * 1.005, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2500, time);
+    filter.frequency.exponentialRampToValueAtTime(1000, time + dur);
+    filter.Q.value = 3;
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.02);
+    gain.gain.setValueAtTime(vol * 0.6, time + dur * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(time);
+    osc2.start(time);
+    osc.stop(time + dur);
+    osc2.stop(time + dur);
+}
+
+function playRetroStab(time, freq, vol, dur) {
+    if (!audioContext) return;
+    // Multiple oscillators for thick brass stab
+    const oscs = [];
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    [1, 1.01, 2, 2.01].forEach(mult => {
+        const osc = audioContext.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * mult, time);
+        osc.connect(filter);
+        oscs.push(osc);
+    });
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3000, time);
+    filter.frequency.exponentialRampToValueAtTime(600, time + dur);
+    filter.Q.value = 2;
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscs.forEach(osc => { osc.start(time); osc.stop(time + dur); });
+}
+
+function playFilterSweep(time, dur, vol) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(55, time); // Low A
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(100, time);
+    filter.frequency.exponentialRampToValueAtTime(3000, time + dur);
+    filter.Q.value = 8;
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + dur * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(time);
+    osc.stop(time + dur);
+}
+
+function playSynthTom(time, freq, vol) {
+    if (!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq * 2, time);
+    osc.frequency.exponentialRampToValueAtTime(freq, time + 0.1);
+
+    gain.gain.setValueAtTime(vol, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(time);
+    osc.stop(time + 0.25);
+}
+
+// === LEVEL COMPLETE CHIME - Satisfying accomplishment sound ===
+function playLevelCompleteChime() {
+    if (!audioContext) return;
+    const now = audioContext.currentTime;
+
+    // Ascending major chord arpeggio - classic "success" sound
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    const vol = 0.1;
+
+    notes.forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.12);
+
+        gain.gain.setValueAtTime(0, now + i * 0.12);
+        gain.gain.linearRampToValueAtTime(vol * (1 - i * 0.12), now + i * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.6);
+
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.6);
+    });
+
+    // Final shimmer
+    const shimmer = audioContext.createOscillator();
+    const shimmerGain = audioContext.createGain();
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(1567.98, now + 0.5); // G6
+
+    shimmerGain.gain.setValueAtTime(0, now + 0.5);
+    shimmerGain.gain.linearRampToValueAtTime(0.06, now + 0.55);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
+
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(audioContext.destination);
+    shimmer.start(now + 0.5);
+    shimmer.stop(now + 1.3);
 }
 
 // New sound functions for dynamic music
