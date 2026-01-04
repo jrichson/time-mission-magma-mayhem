@@ -2075,19 +2075,16 @@ function initAudio() {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         // iOS requires user interaction to enable audio
-        // Add one-time handler to resume audio context on first touch/click
+        // Resume audio context on user interaction
         const resumeAudio = () => {
             if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    console.log('AudioContext resumed');
-                });
+                audioContext.resume();
             }
         };
 
-        // Listen for user interaction to resume audio
-        document.addEventListener('touchstart', resumeAudio, { once: true });
-        document.addEventListener('touchend', resumeAudio, { once: true });
-        document.addEventListener('click', resumeAudio, { once: true });
+        // Listen for user interactions - not using once since we need multiple chances
+        document.addEventListener('touchstart', resumeAudio);
+        document.addEventListener('click', resumeAudio);
 
     } catch (e) {
         console.log('Web Audio not supported');
@@ -2526,11 +2523,14 @@ function playSynthTom(time, freq, vol) {
 // === LEVEL COMPLETE CHIME - Satisfying accomplishment sound ===
 function playLevelCompleteChime() {
     if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     const now = audioContext.currentTime;
 
     // Ascending major chord arpeggio - classic "success" sound
     const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    const vol = 0.1;
+    const vol = 0.2; // Louder chime
 
     notes.forEach((freq, i) => {
         const osc = audioContext.createOscillator();
@@ -2724,11 +2724,14 @@ function playBass(time, freq, vol, dur) {
 
 function playCountdownSound(num) {
     if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = 'square';
     osc.frequency.value = num === 0 ? 880 : 440;
-    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.15, audioContext.currentTime); // Louder countdown
     gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
     osc.connect(gain);
     gain.connect(audioContext.destination);
@@ -2738,12 +2741,15 @@ function playCountdownSound(num) {
 
 function playHopSound() {
     if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(300, audioContext.currentTime);
     osc.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.04, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.08, audioContext.currentTime); // Louder hop
     gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
     osc.connect(gain);
     gain.connect(audioContext.destination);
@@ -2753,13 +2759,16 @@ function playHopSound() {
 
 function playCollectSound() {
     if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(523.25, audioContext.currentTime);
     osc.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.05);
     osc.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.15, audioContext.currentTime); // Louder collect
     gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
     osc.connect(gain);
     gain.connect(audioContext.destination);
@@ -2769,12 +2778,15 @@ function playCollectSound() {
 
 function playHitSound() {
     if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(200, audioContext.currentTime);
     osc.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.2, audioContext.currentTime); // Louder hit
     gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
     osc.connect(gain);
     gain.connect(audioContext.destination);
