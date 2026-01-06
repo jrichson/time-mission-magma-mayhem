@@ -110,6 +110,8 @@
                     <span class="blink">OR PRESS ENTER</span>
                 </div>
 
+                <button id="view-leaderboard-btn" class="game-btn leaderboard-btn">VIEW LEADERBOARD</button>
+
                 <div class="vintage-controls">
                     <p class="desktop-controls">⌨️ ARROW KEYS TO MOVE</p>
                     <p class="mobile-controls">👆 SWIPE TO MOVE</p>
@@ -128,10 +130,30 @@
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="overlay hidden">
-            <div class="overlay-content">
+            <div class="overlay-content game-over-content">
                 <h1>💀 MISSION FAILED 💀</h1>
                 <p id="final-score">Score: 0/100</p>
                 <p id="final-level">Reached Level: 1</p>
+
+                <!-- Name Entry for Leaderboard -->
+                <div id="score-submit-section" class="score-submit-section">
+                    <p class="submit-prompt">Enter your name for the leaderboard:</p>
+                    <div class="name-input-container">
+                        <input type="text" id="player-name-input" class="player-name-input" maxlength="20" placeholder="YOUR NAME" autocomplete="off">
+                        <button id="submit-score-btn" class="game-btn submit-btn">SUBMIT</button>
+                    </div>
+                    <p id="submit-status" class="submit-status"></p>
+                </div>
+
+                <!-- Leaderboard Display (shown after submit or view) -->
+                <div id="game-over-leaderboard" class="leaderboard-container hidden">
+                    <h2 class="leaderboard-title">TOP AGENTS</h2>
+                    <div id="game-over-leaderboard-list" class="leaderboard-list"></div>
+                </div>
+
+                <a href="https://www.timemission.com" target="_blank" rel="noopener" class="discount-banner game-over-coupon">
+                    🎟️ 10% OFF YOUR NEXT TIME MISSION VISIT! 🎟️
+                </a>
                 <button id="retry-btn" class="game-btn">RETRY MISSION</button>
             </div>
         </div>
@@ -180,6 +202,15 @@
             </div>
         </div>
 
+        <!-- Leaderboard Overlay (standalone view from home) -->
+        <div id="leaderboard-overlay" class="overlay hidden">
+            <div class="overlay-content leaderboard-overlay-content">
+                <h1 class="leaderboard-main-title">TOP AGENTS</h1>
+                <div id="main-leaderboard-list" class="leaderboard-list"></div>
+                <button id="close-leaderboard-btn" class="game-btn">BACK</button>
+            </div>
+        </div>
+
         <!-- Music toggle -->
         <button id="music-toggle" class="music-btn">🔊</button>
     </div>
@@ -193,5 +224,6 @@
     }
     </script>
     <script type="module" src="game.js"></script>
+    <script src="leaderboard.js"></script>
 </body>
 </html>

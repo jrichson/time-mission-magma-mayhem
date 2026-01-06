@@ -1517,3 +1517,331 @@ body {
         padding: 12px 14px;
     }
 }
+
+/* ============================================
+   LEADERBOARD STYLES
+   ============================================ */
+
+/* Leaderboard Button on Home Screen */
+.leaderboard-btn {
+    font-family: 'Press Start 2P', monospace !important;
+    font-size: 10px !important;
+    padding: 14px 30px !important;
+    margin: 10px 0 !important;
+    background: linear-gradient(180deg, #ffcc00 0%, #cc9900 100%) !important;
+    color: #1a1a00 !important;
+    border: 2px solid #ffcc00 !important;
+    box-shadow: 0 4px 0 #996600, 0 0 20px rgba(255, 204, 0, 0.4) !important;
+}
+
+.leaderboard-btn:hover {
+    background: linear-gradient(180deg, #ffdd44 0%, #ddaa00 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 0 #996600, 0 0 30px rgba(255, 204, 0, 0.6) !important;
+}
+
+/* Score Submit Section */
+.score-submit-section {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    border: 2px solid #00ffff;
+}
+
+.submit-prompt {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #00ffff;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+}
+
+.name-input-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.player-name-input {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    border-radius: 6px;
+    color: #ffffff;
+    text-transform: uppercase;
+    width: 180px;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.player-name-input:focus {
+    border-color: #00ff88;
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+}
+
+.player-name-input::placeholder {
+    color: #666;
+}
+
+.submit-btn {
+    font-family: 'Press Start 2P', monospace !important;
+    font-size: 10px !important;
+    padding: 12px 20px !important;
+    margin: 0 !important;
+}
+
+.submit-status {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    margin-top: 10px;
+    min-height: 16px;
+    transition: all 0.2s ease;
+}
+
+.submit-status.success {
+    color: #00ff88;
+    text-shadow: 0 0 10px #00ff88;
+}
+
+.submit-status.error {
+    color: #ff4444;
+    text-shadow: 0 0 10px #ff4444;
+}
+
+/* Leaderboard Container */
+.leaderboard-container {
+    margin: 15px 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    border: 2px solid #ffcc00;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.leaderboard-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: #ffcc00;
+    text-shadow: 0 0 10px #ffcc00;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+}
+
+.leaderboard-main-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: #ffcc00;
+    text-shadow: 0 0 15px #ffcc00;
+    margin-bottom: 20px;
+    letter-spacing: 3px;
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.leaderboard-entry {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(30, 30, 50, 0.8);
+    border-radius: 6px;
+    border: 1px solid #333;
+    transition: all 0.2s ease;
+}
+
+.leaderboard-entry.top-three {
+    border-color: #ffcc00;
+    background: rgba(255, 204, 0, 0.1);
+}
+
+.leaderboard-entry.highlighted {
+    border-color: #00ff88;
+    background: rgba(0, 255, 136, 0.15);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    animation: highlightPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(0, 255, 136, 0.6); }
+}
+
+.entry-rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #ffcc00;
+    min-width: 40px;
+    text-align: center;
+}
+
+.entry-char {
+    font-size: 18px;
+    min-width: 30px;
+    text-align: center;
+}
+
+.entry-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    flex: 1;
+    text-align: left;
+    padding: 0 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.entry-score {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #00ffff;
+    text-shadow: 0 0 8px #00ffff;
+    min-width: 40px;
+    text-align: right;
+}
+
+.no-scores {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Leaderboard Overlay Content */
+.leaderboard-overlay-content {
+    min-width: 350px;
+    max-width: 500px;
+}
+
+.leaderboard-overlay-content .leaderboard-list {
+    max-height: 350px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+/* Game Over Content - Adjust for leaderboard */
+.game-over-content {
+    max-width: 450px;
+}
+
+/* Mobile Leaderboard Styles */
+@media (max-width: 768px) {
+    .leaderboard-btn {
+        font-size: 8px !important;
+        padding: 10px 20px !important;
+    }
+
+    .score-submit-section {
+        padding: 12px;
+        margin: 15px 0;
+    }
+
+    .submit-prompt {
+        font-size: 8px;
+    }
+
+    .player-name-input {
+        font-size: 10px;
+        padding: 10px 12px;
+        width: 140px;
+    }
+
+    .submit-btn {
+        font-size: 8px !important;
+        padding: 10px 14px !important;
+    }
+
+    .submit-status {
+        font-size: 7px;
+    }
+
+    .leaderboard-container {
+        padding: 10px;
+        max-height: 200px;
+    }
+
+    .leaderboard-title {
+        font-size: 11px;
+    }
+
+    .leaderboard-main-title {
+        font-size: 14px;
+    }
+
+    .leaderboard-entry {
+        padding: 8px 10px;
+    }
+
+    .entry-rank {
+        font-size: 10px;
+        min-width: 32px;
+    }
+
+    .entry-char {
+        font-size: 14px;
+        min-width: 24px;
+    }
+
+    .entry-name {
+        font-size: 10px;
+    }
+
+    .entry-score {
+        font-size: 10px;
+        min-width: 32px;
+    }
+
+    .leaderboard-overlay-content {
+        min-width: 280px;
+        max-width: 95vw;
+    }
+
+    .leaderboard-overlay-content .leaderboard-list {
+        max-height: 280px;
+    }
+
+    .game-over-content {
+        max-width: 95vw;
+    }
+}
+
+@media (max-width: 400px) {
+    .player-name-input {
+        width: 120px;
+        font-size: 9px;
+    }
+
+    .name-input-container {
+        gap: 6px;
+    }
+
+    .leaderboard-container {
+        max-height: 160px;
+    }
+
+    .entry-rank {
+        font-size: 9px;
+        min-width: 28px;
+    }
+
+    .entry-name {
+        font-size: 9px;
+    }
+
+    .entry-score {
+        font-size: 9px;
+    }
+}

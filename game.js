@@ -41,7 +41,8 @@ const CONFIG = {
 // ============================================
 // GAME STATE
 // ============================================
-const GameState = {
+// Expose GameState globally for leaderboard access
+const GameState = window.GameState = {
     currentLevel: 1,
     totalScore: 0,
     livesRemaining: CONFIG.PLAYER.START_LIVES,
@@ -1914,6 +1915,12 @@ function gameOver() {
     const maxScore = CONFIG.LEVELS.TOTAL * GameState.maxLevelScore;
     document.getElementById('final-score').textContent = `Score: ${GameState.totalScore}/${maxScore}`;
     document.getElementById('final-level').textContent = `Reached Sector: ${GameState.currentLevel}`;
+
+    // Reset leaderboard UI for fresh submission
+    if (window.resetGameOverLeaderboard) {
+        window.resetGameOverLeaderboard();
+    }
+
     document.getElementById('game-over-screen').classList.remove('hidden');
 }
 
