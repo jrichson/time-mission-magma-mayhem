@@ -3,7 +3,10 @@
 // ============================================
 
 const LeaderboardAPI = {
-    baseUrl: window.location.origin,
+    // Use Render backend for API calls, fallback to local origin for development
+    baseUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? window.location.origin
+        : 'https://magma-mayhem.onrender.com',
 
     async getLeaderboard() {
         try {
